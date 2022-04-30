@@ -5,9 +5,8 @@ pragma experimental ABIEncoderV2;
 import "./lib/EncodeDecode.sol";
 import "./lib/DateTime.sol";
 import "./lib/AllowfCashReceiver.sol";
-import "../interfaces/notional/NotionalProxy.sol";
+import "../interfaces/notional/INotionalV2.sol";
 import "../interfaces/notional/IWrappedfCash.sol";
-import "../interfaces/compound/ICToken.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -22,7 +21,7 @@ contract WrappedfCash is IWrappedfCash, ERC777Upgradeable, AllowfCashReceiver, R
     using SafeERC20 for IERC20;
 
     /// @notice address to the NotionalV2 system
-    NotionalProxy public immutable NotionalV2;
+    INotionalV2 public immutable NotionalV2;
 
     /// @dev Storage slot for fCash id. Read only and set on initialization
     uint256 private _fCashId;
@@ -30,7 +29,7 @@ contract WrappedfCash is IWrappedfCash, ERC777Upgradeable, AllowfCashReceiver, R
     /// @notice Constructor is called only on deployment to set the Notional address, rest of state
     /// is initialized on the proxy.
     /// @dev Ensure initializer modifier is on the constructor to prevent an attack on UUPSUpgradeable contracts
-    constructor(NotionalProxy _notional) initializer {
+    constructor(INotionalV2 _notional) initializer {
         NotionalV2 = _notional;
     }
 
