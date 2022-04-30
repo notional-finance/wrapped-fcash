@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 /// @dev This implementation contract is deployed as an UpgradeableBeacon. Each BeaconProxy
 /// that uses this contract as an implementation will call initialize to set its own fCash id.
 /// That identifier will represent the fCash that this ERC20 wrapper can hold.
-contract WrappedfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
+contract wfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     constructor(INotionalV2 _notional) wfCashBase(_notional) {}
@@ -29,7 +29,17 @@ contract WrappedfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
         address receiver,
         uint32 minImpliedRate,
         bool useUnderlying
-    ) external override nonReentrant {
+    ) external override {
+        _mintInternal(depositAmountExternal, fCashAmount, receiver, minImpliedRate, useUnderlying);
+    }
+
+    function _mintInternal(
+        uint256 depositAmountExternal,
+        uint88 fCashAmount,
+        address receiver,
+        uint32 minImpliedRate,
+        bool useUnderlying
+    ) internal nonReentrant {
         require(!hasMatured(), "fCash matured");
         (IERC20 token, /* bool isETH */) = getToken(useUnderlying);
         uint256 balanceBefore = token.balanceOf(address(this));
@@ -274,7 +284,7 @@ contract WrappedfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
         }
     }
 
-    function _safeUint88(uint256 x) private pure returns (uint88) {
+    function _safeUint88(uint256 x) internal pure returns (uint88) {
         require(x <= uint256(type(uint88).max));
         return uint88(x);
     }
@@ -288,17 +298,19 @@ function convertToShares() external view { getCashAmountGivenfCashAmount }
 
 function maxDeposit() external view returns { uint256.max}
 function previewDeposit() external view returns { uint256.max}
-function deposit(uint256 cTokens, address receiver) external view returns { uint256.max}
 
 function maxMint() external view returns { uint256.max}
 function previewMint() external view returns { uint256.max}
-function mint(uint256 fCash, address receiver) external view returns { uint256.max}
+
 
 function maxWithdraw() external view returns { uint256.max}
 function previewWithdraw() external view returns { uint256.max}
-function withdraw(uint256 cTokens, address receiver) external view returns { uint256.max}
 
 function maxRedeem() external view returns { uint256.max}
 function previewRedeem() external view returns { uint256.max}
+
+function deposit(uint256 cTokens, address receiver) external returns { uint256.max}
+function mint(uint256 fCash, address receiver) external view returns { uint256.max}
+function withdraw(uint256 cTokens, address receiver) external view returns { uint256.max}
 function redeem(uint256 fCash, address receiver) external view returns { uint256.max}
 */
