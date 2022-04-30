@@ -2,8 +2,6 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
-import "../../contracts/lib/Types.sol";
-
 interface nERC1155Interface {
     event TransferSingle(
         address indexed operator,
@@ -57,11 +55,6 @@ interface nERC1155Interface {
         uint256[] calldata amounts,
         bytes calldata data
     ) external payable;
-
-    function decodeToAssets(uint256[] calldata ids, uint256[] calldata amounts)
-        external
-        view
-        returns (PortfolioAsset[] memory);
 
     function encodeToId(
         uint16 currencyId,

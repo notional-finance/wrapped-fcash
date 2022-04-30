@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./lib/EncodeDecode.sol";
 import "./lib/DateTime.sol";
-import "./abstract/AllowfCashReceiver.sol";
+import "./lib/AllowfCashReceiver.sol";
 import "../interfaces/notional/NotionalProxy.sol";
 import "../interfaces/notional/IWrappedfCash.sol";
 import "../interfaces/compound/ICToken.sol";

@@ -3,32 +3,8 @@ pragma solidity ^0.8.0;
 pragma abicoder v2;
 
 import "./Constants.sol";
-import "./Types.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 library DateTime {
-    using SafeMath for uint256;
-
-    function isLiquidityToken(uint256 assetType) internal pure returns (bool) {
-        return
-            assetType >= Constants.MIN_LIQUIDITY_TOKEN_INDEX &&
-            assetType <= Constants.MAX_LIQUIDITY_TOKEN_INDEX;
-    }
-
-    /// @notice Liquidity tokens settle every 90 days (not at the designated maturity). This method
-    /// calculates the settlement date for any PortfolioAsset.
-    function getSettlementDate(PortfolioAsset memory asset) internal pure returns (uint256) {
-        require(asset.assetType > 0 && asset.assetType <= Constants.MAX_LIQUIDITY_TOKEN_INDEX); // dev: settlement date invalid asset type
-        // 3 month tokens and fCash tokens settle at maturity
-        if (asset.assetType <= Constants.MIN_LIQUIDITY_TOKEN_INDEX) return asset.maturity;
-
-        uint256 marketLength = getTradedMarket(asset.assetType - 1);
-        // Liquidity tokens settle at tRef + 90 days. The formula to get a maturity is:
-        // maturity = tRef + marketLength
-        // Here we calculate:
-        // tRef = (maturity - marketLength) + 90 days
-        return asset.maturity.sub(marketLength).add(Constants.QUARTER);
-    }
 
     /// @notice Returns the current reference time which is how all the AMM dates are calculated.
     function getReferenceTime(uint256 blockTime) internal pure returns (uint256) {
@@ -56,25 +32,6 @@ library DateTime {
         revert("Invalid index");
     }
 
-    /// @notice Determines if the maturity falls on one of the valid on chain market dates.
-    function isValidMarketMaturity(
-        uint256 maxMarketIndex,
-        uint256 maturity,
-        uint256 blockTime
-    ) internal pure returns (bool) {
-        require(maxMarketIndex > 0, "CG: no markets listed");
-        require(maxMarketIndex <= Constants.MAX_TRADED_MARKET_INDEX, "CG: market index bound");
-
-        if (maturity % Constants.QUARTER != 0) return false;
-        uint256 tRef = DateTime.getReferenceTime(blockTime);
-
-        for (uint256 i = 1; i <= maxMarketIndex; i++) {
-            if (maturity == tRef.add(DateTime.getTradedMarket(i))) return true;
-        }
-
-        return false;
-    }
-
     /// @notice Determines if an idiosyncratic maturity is valid and returns the bit reference that is the case.
     function isValidMaturity(
         uint256 maxMarketIndex,
@@ -82,7 +39,7 @@ library DateTime {
         uint256 blockTime
     ) internal pure returns (bool) {
         uint256 tRef = DateTime.getReferenceTime(blockTime);
-        uint256 maxMaturity = tRef.add(DateTime.getTradedMarket(maxMarketIndex));
+        uint256 maxMaturity = tRef + DateTime.getTradedMarket(maxMarketIndex);
         // Cannot trade past max maturity
         if (maturity > maxMaturity) return false;
 
@@ -104,7 +61,7 @@ library DateTime {
         uint256 tRef = DateTime.getReferenceTime(blockTime);
 
         for (uint256 i = 1; i <= maxMarketIndex; i++) {
-            uint256 marketMaturity = tRef.add(DateTime.getTradedMarket(i));
+            uint256 marketMaturity = tRef + DateTime.getTradedMarket(i);
             // If market matches then is not idiosyncratic
             if (marketMaturity == maturity) return (i, false);
             // Returns the market that is immediately greater than the maturity
@@ -179,41 +136,5 @@ library DateTime {
         // This is the maximum 1-indexed bit num, it is never valid because it is beyond the 20
         // year max maturity
         return (256, false);
-    }
-
-    /// @notice Given a bit number and a block time returns the maturity that the bit number
-    /// should reference. Bit numbers are one indexed.
-    function getMaturityFromBitNum(uint256 blockTime, uint256 bitNum)
-        internal
-        pure
-        returns (uint256)
-    {
-        require(bitNum != 0); // dev: cash group get maturity from bit num is zero
-        require(bitNum <= 256); // dev: cash group get maturity from bit num overflow
-        uint256 blockTimeUTC0 = getTimeUTC0(blockTime);
-        uint256 firstBit;
-
-        if (bitNum <= Constants.WEEK_BIT_OFFSET) {
-            return blockTimeUTC0 + bitNum * Constants.DAY;
-        } else if (bitNum <= Constants.MONTH_BIT_OFFSET) {
-            firstBit =
-                blockTimeUTC0 +
-                Constants.MAX_DAY_OFFSET * Constants.DAY -
-                // This backs up to the day that is divisible by a week
-                (blockTimeUTC0 % Constants.WEEK);
-            return firstBit + (bitNum - Constants.WEEK_BIT_OFFSET) * Constants.WEEK;
-        } else if (bitNum <= Constants.QUARTER_BIT_OFFSET) {
-            firstBit =
-                blockTimeUTC0 +
-                Constants.MAX_WEEK_OFFSET * Constants.DAY -
-                (blockTimeUTC0 % Constants.MONTH);
-            return firstBit + (bitNum - Constants.MONTH_BIT_OFFSET) * Constants.MONTH;
-        } else {
-            firstBit =
-                blockTimeUTC0 +
-                Constants.MAX_MONTH_OFFSET * Constants.DAY -
-                (blockTimeUTC0 % Constants.QUARTER);
-            return firstBit + (bitNum - Constants.QUARTER_BIT_OFFSET) * Constants.QUARTER;
-        }
     }
 }

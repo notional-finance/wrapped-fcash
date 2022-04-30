@@ -1,41 +1,27 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >0.7.0;
+pragma solidity 0.8.11;
 
 import "./Constants.sol";
-import "./Types.sol";
-import "./SafeInt256.sol";
-import "./DateTime.sol";
 
 library EncodeDecode {
-    using SafeInt256 for int256;
+    /// @notice Specifies the different trade action types in the system. Each trade action type is
+    /// encoded in a tightly packed bytes32 object. Trade action type is the first big endian byte of the
+    /// 32 byte trade action object. The schemas for each trade action type are defined below.
+    enum TradeActionType {
+        // (uint8 TradeActionType, uint8 MarketIndex, uint88 fCashAmount, uint32 minImpliedRate, uint120 unused)
+        Lend,
+        // (uint8 TradeActionType, uint8 MarketIndex, uint88 fCashAmount, uint32 maxImpliedRate, uint120 unused)
+        Borrow
 
-    function convertToExternal(
-        int256 amount,
-        int256 decimals
-    ) internal pure returns (int256) {
-        if (decimals == Constants.INTERNAL_TOKEN_PRECISION) return amount;
-        return amount.mul(decimals).div(Constants.INTERNAL_TOKEN_PRECISION);
-    }
-
-    function convertToExternalDepositAmount(
-        int256 amount,
-        int256 decimals
-    ) internal pure returns (uint256) {
-        if (decimals == Constants.INTERNAL_TOKEN_PRECISION) return amount.toUint();
-        int256 val = amount.mul(decimals).div(Constants.INTERNAL_TOKEN_PRECISION);
-        
-        // Handles rounding errors for smaller token precisions
-        if (decimals < Constants.INTERNAL_TOKEN_PRECISION) val += 1;
-
-        return val.toUint();
-    }
-
-    function convertToInternal(
-        int256 amount,
-        int256 decimals
-    ) internal pure returns (int256) {
-        if (decimals == Constants.INTERNAL_TOKEN_PRECISION) return amount;
-        return amount.mul(Constants.INTERNAL_TOKEN_PRECISION).div(decimals);
+        // Below here are unused:
+        // // (uint8 TradeActionType, uint8 MarketIndex, uint88 assetCashAmount, uint32 minImpliedRate, uint32 maxImpliedRate, uint88 unused)
+        // AddLiquidity,
+        // // (uint8 TradeActionType, uint8 MarketIndex, uint88 tokenAmount, uint32 minImpliedRate, uint32 maxImpliedRate, uint88 unused)
+        // RemoveLiquidity,
+        // // (uint8 TradeActionType, uint32 Maturity, int88 fCashResidualAmount, uint128 unused)
+        // PurchaseNTokenResidual,
+        // // (uint8 TradeActionType, address CounterpartyAddress, int88 fCashAmountToSettle)
+        // SettleCashDebt
     }
 
     /// @notice Decodes asset ids
@@ -99,168 +85,5 @@ library EncodeDecode {
                     (uint256(maxImpliedRate) << 120)
                 )
             );
-    }
-
-    function encodeAddLiquidity(
-        uint8 marketIndex,
-        uint88 assetCashAmount,
-        uint32 minImpliedRate,
-        uint32 maxImpliedRate
-    ) internal pure returns (bytes32) {
-        return
-            bytes32(
-                uint256(
-                    (uint8(TradeActionType.AddLiquidity) << 248) |
-                        (marketIndex << 240) |
-                        (assetCashAmount << 152) |
-                        (minImpliedRate << 120) |
-                        (maxImpliedRate << 88)
-                )
-            );
-    }
-
-    function encodeRemoveLiquidity(
-        uint8 marketIndex,
-        uint88 tokenAmount,
-        uint32 minImpliedRate,
-        uint32 maxImpliedRate
-    ) internal pure returns (bytes32) {
-        return
-            bytes32(
-                uint256(
-                    (uint8(TradeActionType.RemoveLiquidity) << 248) |
-                        (marketIndex << 240) |
-                        (tokenAmount << 152) |
-                        (minImpliedRate << 120) |
-                        (maxImpliedRate << 88)
-                )
-            );
-    }
-
-    function encodePurchaseNTokenResidual(
-        uint32 maturity,
-        int88 fCashResidualAmount
-    ) internal pure returns (bytes32) {
-        return
-            bytes32(
-                uint256(
-                    (uint8(TradeActionType.PurchaseNTokenResidual) << 248) |
-                        (maturity << 216) |
-                        (uint256(int256(fCashResidualAmount)) << 128)
-                )
-            );
-    }
-
-    function encodeSettleCashDebt(
-        address counterparty,
-        int88 fCashAmountToSettle
-    ) internal pure returns (bytes32) {
-        return
-            bytes32(
-                uint256(
-                    (uint8(TradeActionType.SettleCashDebt) << 248) |
-                        (uint256(bytes32(bytes20(counterparty))) << 88) |
-                        (uint256(int256(fCashAmountToSettle)))
-                )
-            );
-    }
-
-    function encodeOffsettingTrade(
-        int256 notional,
-        uint256 maturity,
-        uint256 blockTime
-    ) internal pure returns (bytes32, bool) {
-        if (notional == 0) return (bytes32(0), false);
-        (uint256 marketIndex, bool isIdiosyncratic) = DateTime.getMarketIndex(
-            Constants.MAX_TRADED_MARKET_INDEX,
-            maturity,
-            blockTime
-        );
-        // Cannot trade out of an idiosyncratic asset
-        if (isIdiosyncratic) (bytes32(0), false);
-
-        require(type(int88).min < notional && notional < type(int88).max);
-        if (notional > 0) {
-            return (encodeBorrowTrade(uint8(marketIndex), uint88(int88(notional.abs())), 0), true);
-        } else {
-            return (encodeLendTrade(uint8(marketIndex), uint88(int88(notional.abs())), 0), true);
-        }
-    }
-
-    function encodeOffsettingTradesFromPortfolio(
-        PortfolioAsset[] memory portfolio,
-        uint256 fCashCurrency,
-        uint256 blockTime
-    ) private returns (bytes32[] memory) {
-        uint256 numTrades;
-
-        bytes32[] memory trades = new bytes32[](portfolio.length);
-        for (uint256 i; i < portfolio.length; i++) {
-            PortfolioAsset memory asset = portfolio[i];
-            if (asset.currencyId != fCashCurrency) {
-                continue;
-            } else if (asset.assetType == Constants.FCASH_ASSET_TYPE) {
-                (bytes32 trade, bool success) = encodeOffsettingTrade(
-                    asset.notional,
-                    asset.maturity,
-                    blockTime
-                );
-
-                if (success) {
-                    trades[numTrades] = trade;
-                    numTrades++;
-                }
-            } else {
-                // If the token's settlement date is in the past, it will be settled and cannot be
-                // removed from the portfolio
-                uint256 settlementDate = DateTime.getSettlementDate(asset);
-                if (settlementDate <= blockTime) continue;
-
-                (uint256 marketIndex, /* bool isIdiosyncratic */) = DateTime.getMarketIndex(
-                    Constants.MAX_TRADED_MARKET_INDEX,
-                    asset.maturity,
-                    blockTime
-                );
-                require(0 < asset.notional && asset.notional < int256(uint256(type(uint88).max)));
-
-                trades[numTrades] = encodeRemoveLiquidity(
-                    uint8(marketIndex),
-                    uint88(uint256(asset.notional)),
-                    0, 0
-                );
-                numTrades++;
-            }
-        }
-
-        // Resize the trades array down to numTrades length
-        assembly { mstore(trades, sub(mload(trades), numTrades)) }
-        return trades;
-    }
-
-    function encodeOffsettingTradesFromArrays(
-        uint256[] memory fCashMaturities,
-        int256[] memory fCashNotional,
-        uint256 blockTime
-    ) internal pure returns (bytes32[] memory) {
-        require(fCashMaturities.length == fCashNotional.length, "Trade Length Mismatch");
-
-        uint256 numTrades;
-        bytes32[] memory trades = new bytes32[](fCashMaturities.length);
-        for (uint256 i; i < fCashNotional.length; i++) {
-            (bytes32 trade, bool success) = encodeOffsettingTrade(
-                fCashNotional[i],
-                fCashMaturities[i],
-                blockTime
-            );
-
-            if (success) {
-                trades[numTrades] = trade;
-                numTrades++;
-            }
-        }
-
-        // Resize the trades array down to numTrades length
-        assembly { mstore(trades, sub(mload(trades), numTrades)) }
-        return trades;
     }
 }
