@@ -45,7 +45,7 @@ contract WrappedfCash is IWrappedfCash, ERC777Upgradeable, AllowfCashReceiver, R
         );
 
         // Get the corresponding fCash ID
-        _fCashId = NotionalV2.encodeToId(currencyId, maturity, Constants.FCASH_ASSET_TYPE);
+        _fCashId = EncodeDecode.encodeERC1155Id(currencyId, maturity, Constants.FCASH_ASSET_TYPE);
 
         (IERC20 underlyingToken, /* */) = _getUnderlyingToken(currencyId);
         (IERC20 assetToken, /* */, /* */) = getAssetToken();

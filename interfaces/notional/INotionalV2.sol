@@ -6,12 +6,6 @@ import "../../contracts/lib/Types.sol";
 
 interface INotionalV2 {
     
-    function encodeToId(
-        uint16 currencyId,
-        uint40 maturity,
-        uint8 assetType
-    ) external pure returns (uint256 id);
-
     function getCurrency(uint16 currencyId)
         external
         view
@@ -46,7 +40,6 @@ interface INotionalV2 {
         uint256 blockTime
     ) external view returns (int256, int256);
     
-
     function safeTransferFrom(
         address from,
         address to,

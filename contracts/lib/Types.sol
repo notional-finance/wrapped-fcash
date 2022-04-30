@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../../interfaces/chainlink/AggregatorV2V3Interface.sol";
-import "../../interfaces/notional/AssetRateAdapter.sol";
-
 /// @notice Different types of internal tokens
 ///  - UnderlyingToken: underlying asset for a cToken (except for Ether)
 ///  - cToken: Compound interest bearing token
@@ -65,22 +62,6 @@ enum AssetStorageState {
     Delete
 }
 
-/// @notice Defines a balance action for batchAction
-struct BalanceAction {
-    // Deposit action to take (if any)
-    DepositActionType actionType;
-    uint16 currencyId;
-    // Deposit action amount must correspond to the depositActionType, see documentation above.
-    uint256 depositActionAmount;
-    // Withdraw an amount of asset cash specified in Notional internal 8 decimal precision
-    uint256 withdrawAmountInternalPrecision;
-    // If set to true, will withdraw entire cash balance. Useful if there may be an unknown amount of asset cash
-    // residual left from trading.
-    bool withdrawEntireCashBalance;
-    // If set to true, will redeem asset cash to the underlying token on withdraw.
-    bool redeemToUnderlying;
-}
-
 /// @notice Defines a batch lending action
 struct BatchLend {
     uint16 currencyId;
@@ -123,26 +104,6 @@ struct PortfolioAsset {
     uint256 storageSlot;
     // The state of the asset for when it is written to storage
     AssetStorageState storageState;
-}
-
-/// @dev Market object as represented in memory
-struct MarketParameters {
-    bytes32 storageSlot;
-    uint256 maturity;
-    // Total amount of fCash available for purchase in the market.
-    int256 totalfCash;
-    // Total amount of cash available for purchase in the market.
-    int256 totalAssetCash;
-    // Total amount of liquidity tokens (representing a claim on liquidity) in the market.
-    int256 totalLiquidity;
-    // This is the implied rate that we use to smooth the anchor rate between trades.
-    uint256 lastImpliedRate;
-    // This is the oracle rate used to value fCash and prevent flash loan attacks
-    uint256 oracleRate;
-    // This is the timestamp of the previous trade
-    uint256 previousTradeTime;
-    // Used to determine if the market has been updated
-    bytes1 storageState;
 }
 
 /// @dev Governance parameters for a cash group, total storage is 9 bytes + 7 bytes for liquidity token haircuts
@@ -200,67 +161,10 @@ struct AccountBalance {
     uint256 lastClaimIntegralSupply;
 }
 
-/// @dev Token object in storage:
-///  20 bytes for token address
-///  1 byte for hasTransferFee
-///  1 byte for tokenType
-///  1 byte for tokenDecimals
-///  9 bytes for maxCollateralBalance (may not always be set)
-struct TokenStorage {
-    // Address of the token
-    address tokenAddress;
-    // Transfer fees will change token deposit behavior
-    bool hasTransferFee;
-    TokenType tokenType;
-    uint8 decimalPlaces;
-    // Upper limit on how much of this token the contract can hold at any time
-    uint72 maxCollateralBalance;
-}
-
-/// @dev Exchange rate object as it is represented in storage, total storage is 25 bytes.
-struct ETHRateStorage {
-    // Address of the rate oracle
-    AggregatorV2V3Interface rateOracle;
-    // The decimal places of precision that the rate oracle uses
-    uint8 rateDecimalPlaces;
-    // True of the exchange rate must be inverted
-    bool mustInvert;
-    // NOTE: both of these governance values are set with BUFFER_DECIMALS precision
-    // Amount of buffer to apply to the exchange rate for negative balances.
-    uint8 buffer;
-    // Amount of haircut to apply to the exchange rate for positive balances
-    uint8 haircut;
-    // Liquidation discount in percentage point terms, 106 means a 6% discount
-    uint8 liquidationDiscount;
-}
-
-/// @dev Asset rate oracle object as it is represented in storage, total storage is 21 bytes.
-struct AssetRateStorage {
-    // Address of the rate oracle
-    AssetRateAdapter rateOracle;
-    // The decimal places of the underlying asset
-    uint8 underlyingDecimalPlaces;
-}
-
-/// @notice In memory ETH exchange rate used during free collateral calculation.
-struct ETHRate {
-    // The decimals (i.e. 10^rateDecimalPlaces) of the exchange rate, defined by the rate oracle
-    int256 rateDecimals;
-    // The exchange rate from base to ETH (if rate invert is required it is already done)
-    int256 rate;
-    // Amount of buffer as a multiple with a basis of 100 applied to negative balances.
-    int256 buffer;
-    // Amount of haircut as a multiple with a basis of 100 applied to positive balances
-    int256 haircut;
-    // Liquidation discount as a multiple with a basis of 100 applied to the exchange rate
-    // as an incentive given to liquidators.
-    int256 liquidationDiscount;
-}
-
 /// @dev Asset rate used to convert between underlying cash and asset cash
 struct AssetRateParameters {
     // Address of the asset rate oracle
-    AssetRateAdapter rateOracle;
+    address rateOracle;
     // The exchange rate from base to quote (if invert is required it is already done)
     int256 rate;
     // The decimals of the underlying, the rate converts to the underlying decimals

@@ -2,27 +2,9 @@
 pragma solidity 0.8.11;
 
 import "./Constants.sol";
+import "./Types.sol";
 
 library EncodeDecode {
-    /// @notice Specifies the different trade action types in the system. Each trade action type is
-    /// encoded in a tightly packed bytes32 object. Trade action type is the first big endian byte of the
-    /// 32 byte trade action object. The schemas for each trade action type are defined below.
-    enum TradeActionType {
-        // (uint8 TradeActionType, uint8 MarketIndex, uint88 fCashAmount, uint32 minImpliedRate, uint120 unused)
-        Lend,
-        // (uint8 TradeActionType, uint8 MarketIndex, uint88 fCashAmount, uint32 maxImpliedRate, uint120 unused)
-        Borrow
-
-        // Below here are unused:
-        // // (uint8 TradeActionType, uint8 MarketIndex, uint88 assetCashAmount, uint32 minImpliedRate, uint32 maxImpliedRate, uint88 unused)
-        // AddLiquidity,
-        // // (uint8 TradeActionType, uint8 MarketIndex, uint88 tokenAmount, uint32 minImpliedRate, uint32 maxImpliedRate, uint88 unused)
-        // RemoveLiquidity,
-        // // (uint8 TradeActionType, uint32 Maturity, int88 fCashResidualAmount, uint128 unused)
-        // PurchaseNTokenResidual,
-        // // (uint8 TradeActionType, address CounterpartyAddress, int88 fCashAmountToSettle)
-        // SettleCashDebt
-    }
 
     /// @notice Decodes asset ids
     function decodeERC1155Id(uint256 id)
