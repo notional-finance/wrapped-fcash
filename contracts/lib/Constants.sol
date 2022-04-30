@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 /// @title All shared constants for the Notional system should be declared here.
 library Constants {
+    address internal constant ETH_ADDRESS = address(0);
+
     // Token precision used for all internal balances, TokenHandler library ensures that we
     // limit the dust amount caused by precision mismatches
     int256 internal constant INTERNAL_TOKEN_PRECISION = 1e8;

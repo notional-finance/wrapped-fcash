@@ -18,15 +18,9 @@ import "@openzeppelin-upgradeable/contracts/token/ERC777/ERC777Upgradeable.sol";
 /// @dev This implementation contract is deployed as an UpgradeableBeacon. Each BeaconProxy
 /// that uses this contract as an implementation will call initialize to set its own fCash id.
 /// That identifier will represent the fCash that this ERC20 wrapper can hold.
-contract WrappedfCash is
-    IWrappedfCash,
-    ERC777Upgradeable,
-    AllowfCashReceiver,
-    ReentrancyGuard
-{
+contract WrappedfCash is IWrappedfCash, ERC777Upgradeable, AllowfCashReceiver, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    address internal constant ETH_ADDRESS = address(0);
     /// @notice address to the NotionalV2 system
     NotionalProxy public immutable NotionalV2;
 
@@ -41,42 +35,23 @@ contract WrappedfCash is
     }
 
     /// @notice Initializes a proxy for a specific fCash asset
-    function initialize(uint16 currencyId, uint40 maturity)
-        external
-        override
-        initializer
-    {
-        CashGroupSettings memory cashGroup = NotionalV2.getCashGroup(
-            currencyId
-        );
+    function initialize(uint16 currencyId, uint40 maturity) external override initializer {
+        CashGroupSettings memory cashGroup = NotionalV2.getCashGroup(currencyId);
         require(cashGroup.maxMarketIndex > 0, "Invalid currency");
         // Ensure that the maturity is not past the max market index, also ensure that the maturity
         // is not in the past. This statement will allow idiosyncratic (non-tradable) fCash assets.
         require(
-            DateTime.isValidMaturity(
-                cashGroup.maxMarketIndex,
-                maturity,
-                block.timestamp
-            ),
+            DateTime.isValidMaturity(cashGroup.maxMarketIndex, maturity, block.timestamp),
             "Invalid maturity"
         );
 
-        _fCashId = EncodeDecode.encodeERC1155Id(
-            currencyId,
-            maturity,
-            Constants.FCASH_ASSET_TYPE
-        );
-        (
-            IERC20 underlyingToken, /* */
+        // Get the corresponding fCash ID
+        _fCashId = NotionalV2.encodeToId(currencyId, maturity, Constants.FCASH_ASSET_TYPE);
 
-        ) = _getUnderlyingToken(currencyId);
-        (
-            IERC20 assetToken, /* */ /* */
-            ,
+        (IERC20 underlyingToken, /* */) = _getUnderlyingToken(currencyId);
+        (IERC20 assetToken, /* */, /* */) = getAssetToken();
 
-        ) = getAssetToken();
-
-        string memory _symbol = address(underlyingToken) == ETH_ADDRESS
+        string memory _symbol = address(underlyingToken) == Constants.ETH_ADDRESS
             ? "ETH"
             : IERC20Metadata(address(underlyingToken)).symbol();
 
@@ -96,7 +71,7 @@ contract WrappedfCash is
         assetToken.safeApprove(address(NotionalV2), type(uint256).max);
         if (
             address(assetToken) != address(underlyingToken) &&
-            address(underlyingToken) != ETH_ADDRESS
+            address(underlyingToken) != Constants.ETH_ADDRESS
         ) {
             underlyingToken.safeApprove(address(NotionalV2), type(uint256).max);
         }
@@ -120,17 +95,10 @@ contract WrappedfCash is
         bool useUnderlying
     ) external override nonReentrant {
         require(!hasMatured(), "fCash matured");
-        (
-            IERC20 token, /* bool isETH */
-
-        ) = _getToken(useUnderlying);
+        (IERC20 token, /* bool isETH */) = _getToken(useUnderlying);
         uint256 balanceBefore = token.balanceOf(address(this));
         // Transfers tokens in for lending, Notional will transfer from this contract.
-        token.safeTransferFrom(
-            msg.sender,
-            address(this),
-            depositAmountExternal
-        );
+        token.safeTransferFrom(msg.sender, address(this), depositAmountExternal);
 
         // Executes a lending action on Notional
         BatchLend[] memory action = new BatchLend[](1);
@@ -279,11 +247,7 @@ contract WrappedfCash is
             NotionalV2.settleAccount(address(this));
             uint16 currencyId = getCurrencyId();
 
-            (
-                int256 cashBalance, /* */ /* */
-                ,
-
-            ) = NotionalV2.getAccountBalance(currencyId, address(this));
+            (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
             require(0 < cashBalance, "Negative Cash Balance");
 
             // This always rounds down in favor of the wrapped fCash contract.
@@ -386,33 +350,21 @@ contract WrappedfCash is
         uint256 tokensTransferred
     ) internal {
         if (isETH) {
-            (
-                bool success, /* */
-
-            ) = payable(receiver).call{value: tokensTransferred}("");
+            (bool success, /* */) = payable(receiver).call{value: tokensTransferred}("");
             require(success);
         } else {
             token.safeTransfer(receiver, tokensTransferred);
         }
     }
 
-    function _getToken(bool useUnderlying)
-        internal
-        returns (IERC20 token, bool isETH)
+    function _getToken(bool useUnderlying) internal view returns (IERC20 token, bool isETH)
     {
         if (useUnderlying) {
-            (
-                token, /* */
-
-            ) = getUnderlyingToken();
+            (token, /* */) = getUnderlyingToken();
         } else {
-            (
-                token, /* */ /* */
-                ,
-
-            ) = getAssetToken();
+            (token, /* */, /* */) = getAssetToken();
         }
-        isETH = address(token) == ETH_ADDRESS;
+        isETH = address(token) == Constants.ETH_ADDRESS;
     }
 
     /***** View Methods  *****/
@@ -424,12 +376,7 @@ contract WrappedfCash is
 
     /// @notice Returns the underlying fCash maturity of the token
     function getMaturity() public view override returns (uint40 maturity) {
-        (
-            ,
-            /* */
-            maturity, /* */
-
-        ) = EncodeDecode.decodeERC1155Id(_fCashId);
+        (/* */, maturity, /* */) = EncodeDecode.decodeERC1155Id(_fCashId);
     }
 
     /// @notice True if the fCash has matured, assets mature exactly on the block time
@@ -439,25 +386,12 @@ contract WrappedfCash is
 
     /// @notice Returns the underlying fCash currency
     function getCurrencyId() public view override returns (uint16 currencyId) {
-        (
-            currencyId, /* */ /* */
-            ,
-
-        ) = EncodeDecode.decodeERC1155Id(_fCashId);
+        (currencyId, /* */, /* */) = EncodeDecode.decodeERC1155Id(_fCashId);
     }
 
     /// @notice Returns the components of the fCash idd
-    function getDecodedID()
-        public
-        view
-        override
-        returns (uint16 currencyId, uint40 maturity)
-    {
-        (
-            currencyId,
-            maturity, /* */
-
-        ) = EncodeDecode.decodeERC1155Id(_fCashId);
+    function getDecodedID() public view override returns (uint16 currencyId, uint40 maturity) {
+        (currencyId, maturity, /* */) = EncodeDecode.decodeERC1155Id(_fCashId);
     }
 
     /// @notice fCash is always denominated in 8 decimal places
@@ -482,25 +416,14 @@ contract WrappedfCash is
     /// @notice Returns the token and precision of the token that this token settles
     /// to. For example, fUSDC will return the USDC token address and 1e6. The zero
     /// address will represent ETH.
-    function getUnderlyingToken()
-        public
-        view
-        override
-        returns (IERC20 underlyingToken, int256 underlyingPrecision)
-    {
+    function getUnderlyingToken() public view override returns (IERC20 underlyingToken, int256 underlyingPrecision) {
         uint16 currencyId = getCurrencyId();
         return _getUnderlyingToken(currencyId);
     }
 
     /// @dev Called during initialization to set token name and symbol
-    function _getUnderlyingToken(uint16 currencyId)
-        private
-        view
-        returns (IERC20 underlyingToken, int256 underlyingPrecision)
-    {
-        (Token memory asset, Token memory underlying) = NotionalV2.getCurrency(
-            currencyId
-        );
+    function _getUnderlyingToken(uint16 currencyId) private view returns (IERC20 underlyingToken, int256 underlyingPrecision) {
+        (Token memory asset, Token memory underlying) = NotionalV2.getCurrency(currencyId);
 
         if (asset.tokenType == TokenType.NonMintable) {
             // In this case the asset token is the underlying
@@ -512,21 +435,8 @@ contract WrappedfCash is
 
     /// @notice Returns the asset token which the fCash settles to. This will be an interest
     /// bearing token like a cToken or aToken.
-    function getAssetToken()
-        public
-        view
-        override
-        returns (
-            IERC20 underlyingToken,
-            int256 underlyingPrecision,
-            TokenType tokenType
-        )
-    {
-        (
-            Token memory asset, /* Token memory underlying */
-
-        ) = NotionalV2.getCurrency(getCurrencyId());
-
+    function getAssetToken() public view override returns (IERC20 underlyingToken, int256 underlyingPrecision, TokenType tokenType) {
+        (Token memory asset, /* Token memory underlying */) = NotionalV2.getCurrency(getCurrencyId());
         return (IERC20(asset.tokenAddress), asset.decimals, asset.tokenType);
     }
 }
