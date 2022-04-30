@@ -16,9 +16,8 @@ contract WrappedfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
 
     /***** Mint Methods *****/
 
-    /// @notice Lends cashAmount in return for fCashAmount. This is less efficient than doing
-    /// a batchLend and ERC1155 transfer directly from the sender but is here for convenience.
-    /// This method does not work with ETH, use cETH or aETH instead.
+    /// @notice Lends cashAmount in return for fCashAmount. This method does not work with ETH,
+    /// use cETH or aETH instead with the "useUnderlying" flag set to false
     /// @param depositAmountExternal amount of cash to deposit into this method
     /// @param fCashAmount amount of fCash to purchase (lend)
     /// @param receiver address to receive the fCash shares
@@ -34,30 +33,24 @@ contract WrappedfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
         require(!hasMatured(), "fCash matured");
         (IERC20 token, /* bool isETH */) = getToken(useUnderlying);
         uint256 balanceBefore = token.balanceOf(address(this));
+
         // Transfers tokens in for lending, Notional will transfer from this contract.
         token.safeTransferFrom(msg.sender, address(this), depositAmountExternal);
 
         // Executes a lending action on Notional
-        BatchLend[] memory action = new BatchLend[](1);
-        action[0].currencyId = getCurrencyId();
-        action[0].depositUnderlying = useUnderlying;
-        action[0].trades = new bytes32[](1);
-        action[0].trades[0] = EncodeDecode.encodeLendTrade(
+        BatchLend[] memory action = EncodeDecode.encodeLendTrade(
+            getCurrencyId(),
             getMarketIndex(),
             fCashAmount,
-            minImpliedRate
+            minImpliedRate,
+            useUnderlying
         );
         NotionalV2.batchLend(address(this), action);
 
         // Mints ERC20 tokens for the receiver
         _mint(receiver, fCashAmount, "", "", false);
 
-        // Send any residuals from lending back to the sender
-        uint256 balanceAfter = token.balanceOf(address(this));
-        uint256 residual = balanceAfter - balanceBefore;
-        if (residual > 0) {
-            token.safeTransfer(msg.sender, residual);
-        }
+        _sendTokensToReceiver(token, msg.sender, false, balanceBefore);
     }
 
     /// @notice This hook will be called every time this contract receives fCash, will validate that
@@ -69,7 +62,7 @@ contract WrappedfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
         uint256 _id,
         uint256 _value,
         bytes calldata _data
-    ) external override returns (bytes4) {
+    ) external override nonReentrant returns (bytes4) {
         // Only accept erc1155 transfers from NotionalV2
         require(msg.sender == address(NotionalV2), "Invalid caller");
         // Only accept the fcash id that corresponds to the listed currency and maturity
@@ -123,11 +116,15 @@ contract WrappedfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
 
     /***** Redeem (Burn) Methods *****/
 
+    /// @notice Redeems tokens using custom options
+    /// @dev re-entrancy is protected on _burn
     function redeem(uint256 amount, RedeemOpts memory opts) public override {
         bytes memory data = abi.encode(opts);
         burn(amount, data);
     }
 
+    /// @notice Redeems tokens to asset tokens
+    /// @dev re-entrancy is protected on _burn
     function redeemToAsset(
         uint256 amount,
         address receiver,
@@ -144,6 +141,8 @@ contract WrappedfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
         );
     }
 
+    /// @notice Redeems tokens to underlying
+    /// @dev re-entrancy is protected on _burn
     function redeemToUnderlying(
         uint256 amount,
         address receiver,
@@ -188,22 +187,20 @@ contract WrappedfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
             require(0 < cashBalance, "Negative Cash Balance");
 
             // This always rounds down in favor of the wrapped fCash contract.
-            uint256 assetInternalCashClaim = (uint256(cashBalance) * amount) /
-                initialTotalSupply;
-            require(assetInternalCashClaim <= uint256(type(uint88).max));
+            uint256 assetInternalCashClaim = (uint256(cashBalance) * amount) / initialTotalSupply;
 
             // Transfer withdrawn tokens to the `from` address
             _withdrawCashToAccount(
                 currencyId,
                 from,
-                uint88(assetInternalCashClaim),
+                _safeUint88(assetInternalCashClaim),
                 opts.redeemToUnderlying
             );
         } else if (opts.transferfCash) {
             // If the fCash has not matured, then we can transfer it via ERC1155.
-            // NOTE: this will fail if the destination is a contract because the ERC1155 contract
-            // does a callback to the `onERC1155Received` hook. If that is the case it is possible
-            // to use a regular ERC20 transfer on this contract instead.
+            // NOTE: this may fail if the destination is a contract and it does not implement 
+            // the `onERC1155Received` hook. If that is the case it is possible to use a regular
+            // ERC20 transfer on this contract instead.
             NotionalV2.safeTransferFrom(
                 address(this), // Sending from this contract
                 opts.receiver, // Where to send the fCash
@@ -229,17 +226,11 @@ contract WrappedfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
         bool toUnderlying
     ) private returns (uint256 tokensTransferred) {
         (IERC20 token, bool isETH) = getToken(toUnderlying);
+        uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
 
-        uint256 balanceBefore = isETH
-            ? address(this).balance
-            : token.balanceOf(address(this));
         NotionalV2.withdraw(currencyId, assetInternalCashClaim, toUnderlying);
-        uint256 balanceAfter = isETH
-            ? address(this).balance
-            : token.balanceOf(address(this));
 
-        tokensTransferred = balanceAfter - balanceBefore;
-        _sendTokensToReceiver(token, receiver, isETH, tokensTransferred);
+        tokensTransferred = _sendTokensToReceiver(token, receiver, isETH, balanceBefore);
     }
 
     /// @dev Sells an fCash share back on the Notional AMM
@@ -250,48 +241,42 @@ contract WrappedfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
         uint32 maxImpliedRate
     ) private returns (uint256 tokensTransferred) {
         (IERC20 token, bool isETH) = getToken(toUnderlying);
-        require(fCashToSell <= uint256(type(uint88).max));
-        uint88 fCashAmount = uint88(fCashToSell);
+        uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
 
-        BalanceActionWithTrades[] memory action = new BalanceActionWithTrades[](
-            1
-        );
-        action[0].actionType = DepositActionType.None;
-        action[0].currencyId = getCurrencyId();
-        action[0].withdrawEntireCashBalance = true;
-        action[0].redeemToUnderlying = toUnderlying;
-        action[0].trades = new bytes32[](1);
-        action[0].trades[0] = EncodeDecode.encodeBorrowTrade(
+        // Sells fCash on Notional AMM (via borrowing)
+        BalanceActionWithTrades[] memory action = EncodeDecode.encodeBorrowTrade(
+            getCurrencyId(),
             getMarketIndex(),
-            fCashAmount,
-            maxImpliedRate
+            _safeUint88(fCashToSell),
+            maxImpliedRate,
+            toUnderlying
         );
-
-        uint256 balanceBefore = isETH
-            ? address(this).balance
-            : token.balanceOf(address(this));
         NotionalV2.batchBalanceAndTradeAction(address(this), action);
-        uint256 balanceAfter = isETH
-            ? address(this).balance
-            : token.balanceOf(address(this));
 
         // Send borrowed cash back to receiver
-        tokensTransferred = balanceAfter - balanceBefore;
-        _sendTokensToReceiver(token, receiver, isETH, tokensTransferred);
+        tokensTransferred = _sendTokensToReceiver(token, receiver, isETH, balanceBefore);
     }
 
     function _sendTokensToReceiver(
         IERC20 token,
         address receiver,
         bool isETH,
-        uint256 tokensTransferred
-    ) internal {
+        uint256 balanceBefore
+    ) private returns (uint256 tokensTransferred) {
+        uint256 balanceAfter = isETH ? address(this).balance : token.balanceOf(address(this));
+        tokensTransferred = balanceAfter - balanceBefore;
+
         if (isETH) {
             (bool success, /* */) = payable(receiver).call{value: tokensTransferred}("");
             require(success);
         } else {
             token.safeTransfer(receiver, tokensTransferred);
         }
+    }
+
+    function _safeUint88(uint256 x) private pure returns (uint88) {
+        require(x <= uint256(type(uint88).max));
+        return uint88(x);
     }
 }
 
