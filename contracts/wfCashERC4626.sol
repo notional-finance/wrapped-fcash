@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./wfCash.sol";
+import "./WrappedfCash.sol";
 import "../interfaces/IERC4626.sol";
 
-contract wfCashERC4626 is IERC4626, wfCash {
-    constructor(INotionalV2 _notional) wfCash(_notional) {}
+contract wfCashERC4626 is IERC4626, WrappedfCash {
+    constructor(INotionalV2 _notional) WrappedfCash(_notional) {}
 
     /** @dev See {IERC4262-asset} */
     function asset() public view override returns (address) {
@@ -125,7 +125,7 @@ contract wfCashERC4626 is IERC4626, wfCash {
         uint256 shares = previewWithdraw(assets);
 
         if (msg.sender != owner) {
-            // _spendAllowance(owner, caller, shares);
+            _spendAllowance(owner, msg.sender, shares);
         }
         _redeemInternal(shares, receiver, owner);
 
@@ -143,7 +143,7 @@ contract wfCashERC4626 is IERC4626, wfCash {
         uint256 assets = previewRedeem(shares);
 
         if (msg.sender != owner) {
-            // _spendAllowance(owner, msg.sender, shares);
+            _spendAllowance(owner, msg.sender, shares);
         }
         _redeemInternal(shares, receiver, owner);
 

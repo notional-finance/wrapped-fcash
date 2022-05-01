@@ -2,7 +2,6 @@ import json
 
 from brownie import accounts
 from brownie.network.contract import Contract
-from brownie.project import NotionalSoliditySdkProject
 
 with open("abi/nComptroller.json", "r") as a:
     Comptroller = json.load(a)

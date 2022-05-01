@@ -2,8 +2,9 @@ import pytest
 import brownie
 import eth_abi
 from tests.helpers import get_balance_trade_action
-from brownie import Contract, WrappedfCash, nProxyAdmin, network
+from brownie import Contract, WrappedfCash, network, nUpgradeableBeacon
 from brownie.convert.datatypes import Wei
+from brownie.convert import to_bytes
 from brownie.network import Chain
 from scripts.EnvironmentConfig import getEnvironment
 
@@ -105,8 +106,7 @@ def test_deploy_wrapped_fcash(factory, env):
 def test_upgrade_wrapped_fcash(factory, beacon, wrapper, env):
     assert wrapper.getCurrencyId() == 2
 
-    emptyImpl = nProxyAdmin.deploy({"from": env.deployer})
-    beacon.upgradeTo(emptyImpl.address, {"from": env.deployer})
+    beacon.upgradeTo(factory.address, {"from": env.deployer})
 
     with brownie.reverts():
         wrapper.getCurrencyId()
