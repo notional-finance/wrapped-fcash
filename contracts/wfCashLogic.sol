@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 /// @dev This implementation contract is deployed as an UpgradeableBeacon. Each BeaconProxy
 /// that uses this contract as an implementation will call initialize to set its own fCash id.
 /// That identifier will represent the fCash that this ERC20 wrapper can hold.
-contract WrappedfCash is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
+abstract contract wfCashLogic is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     constructor(INotionalV2 _notional) wfCashBase(_notional) {}

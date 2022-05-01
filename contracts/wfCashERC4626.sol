@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./WrappedfCash.sol";
+import "./wfCashLogic.sol";
 import "../interfaces/IERC4626.sol";
 
-contract wfCashERC4626 is IERC4626, WrappedfCash {
-    constructor(INotionalV2 _notional) WrappedfCash(_notional) {}
+contract wfCashERC4626 is IERC4626, wfCashLogic {
+    constructor(INotionalV2 _notional) wfCashLogic(_notional) {}
 
     /** @dev See {IERC4262-asset} */
     function asset() public view override returns (address) {

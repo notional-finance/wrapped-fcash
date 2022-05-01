@@ -119,3 +119,7 @@ def get_trade_action(**kwargs):
                 int(kwargs["amountToSettle"]),
             ],
         )
+
+def get_lend_action(currencyId, tradeActionData, depositUnderlying):
+    tradeActions = [get_trade_action(**t) for t in tradeActionData]
+    return (currencyId, depositUnderlying, tradeActions)
