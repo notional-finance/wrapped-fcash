@@ -9,28 +9,37 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4262-asset} */
     function asset() public view override returns (address) {
-        (IERC20 assetToken, /* */, /* */) = getAssetToken();
-        return address(assetToken);
+        (IERC20 underlyingToken, /* */) = getUnderlyingToken();
+        return address(underlyingToken);
     }
 
     /** @dev See {IERC4262-totalAssets} */
     function totalAssets() public view override returns (uint256) {
-        // Simulates the value if all fCash tokens were sold
-        return convertToAssets(totalSupply());
+        // TODO: if has matured convert cash balance share...
+
+        int256 pv = NotionalV2.getPresentfCashValue(
+            getCurrencyId(),
+            getMaturity(),
+            int256(totalSupply()), // total supply cannot overflow as fCash overflows at uint88
+            block.timestamp,
+            false
+        );
+
+        // PV should always be >= 0
+        require(pv >= 0);
+        return uint256(pv);
     }
 
-    /**
-     * @dev See {IERC4262-convertToShares}
-     *
-     * Will revert if asserts > 0, totalSupply > 0 and totalAssets = 0. That corresponds to a case where any asset
-     * would represent an infinite amout of shares.
-     */
+    /** @dev See {IERC4262-convertToShares} */
     function convertToShares(uint256 assets) public view override returns (uint256 shares) {
-        // TODO: if aToken need to convert scaled balance of...
+        (/* */, int256 precision) = getUnderlyingToken();
+        uint256 underlyingCashInternal = (assets * uint256(Constants.INTERNAL_TOKEN_PRECISION)) / uint256(precision);
+
+        // TODO: if has matured convert cash balance share...
 
         int256 fCashAmount = NotionalV2.getfCashAmountGivenCashAmount(
             getCurrencyId(),
-            _safeNegInt88(assets),
+            _safeNegInt88(underlyingCashInternal),
             getMarketIndex(),
             block.timestamp
         );
@@ -42,27 +51,30 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4262-convertToAssets} */
     function convertToAssets(uint256 shares) public view override returns (uint256 assets) {
-        // TODO: if aToken need to convert scaled balance of...
+        // TODO: if has matured convert cash balance share...
 
-        (int256 assetCash, /* */) = NotionalV2.getCashAmountGivenfCashAmount(
+        (/*  */, int256 underlyingCashInternal) = NotionalV2.getCashAmountGivenfCashAmount(
             getCurrencyId(),
             _safeNegInt88(shares),
             getMarketIndex(),
             block.timestamp
         );
-        require(assetCash > 0);
 
-        return uint256(assetCash);
+        (/* */, int256 precision) = getUnderlyingToken();
+        int256 underlyingCashExternal = (underlyingCashInternal * precision) / Constants.INTERNAL_TOKEN_PRECISION;
+        require(underlyingCashExternal > 0);
+
+        return uint256(underlyingCashExternal);
     }
 
     /** @dev See {IERC4262-maxDeposit} */
     function maxDeposit(address) public view override returns (uint256) {
-        return type(uint256).max;
+        return hasMatured() ? 0 : type(uint256).max;
     }
 
     /** @dev See {IERC4262-maxMint} */
     function maxMint(address) public view override returns (uint256) {
-        return type(uint88).max;
+        return hasMatured() ? 0 : type(uint88).max;
     }
 
     /** @dev See {IERC4262-maxWithdraw} */
@@ -77,11 +89,13 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4262-previewDeposit} */
     function previewDeposit(uint256 assets) public view override returns (uint256) {
+        require(!hasMatured(), "Matured");
         return convertToShares(assets);
     }
 
     /** @dev See {IERC4262-previewMint} */
     function previewMint(uint256 shares) public view override returns (uint256) {
+        require(!hasMatured(), "Matured");
         uint256 assets = convertToAssets(shares);
         return assets + (convertToShares(assets) < shares ? 1 : 0);
     }
@@ -99,10 +113,10 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4262-deposit} */
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
-        require(assets <= maxDeposit(receiver), "ERC4626: deposit more then max");
+        require(assets <= maxDeposit(receiver), "Max Deposit");
         uint256 shares = previewDeposit(assets);
 
-        _mintInternal(assets, _safeUint88(shares), receiver, 0, false);
+        _mintInternal(assets, _safeUint88(shares), receiver, 0, true);
         emit Deposit(msg.sender, receiver, assets, shares);
         return shares;
     }
@@ -111,7 +125,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     function mint(uint256 shares, address receiver) public override returns (uint256) {
         uint256 assets = previewMint(shares);
 
-        _mintInternal(assets, _safeUint88(shares), receiver, 0, false);
+        _mintInternal(assets, _safeUint88(shares), receiver, 0, true);
         emit Deposit(msg.sender, receiver, assets, shares);
         return assets;
     }
@@ -168,8 +182,8 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     }
 
     function _safeNegInt88(uint256 x) private pure returns (int88) {
-        // TODO: is this correct?
-        require(x <= uint256(int256(type(int88).max)));
-        return -int88(int256(x));
+        int256 y = -int256(x);
+        require(int256(type(int88).min) <= y);
+        return int88(y);
     }
 }

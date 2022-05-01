@@ -16,9 +16,9 @@ networks:
   hardhat-fork:
     cmd_settings:
       fork_block: 13986174
-  hardhat-fork:
+  kovan-fork:
     cmd_settings:
-      fork_block: 31243300
+      fork_block: 31360000
 
 reports:
   exclude_paths:

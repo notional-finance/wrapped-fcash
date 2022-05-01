@@ -39,6 +39,14 @@ interface INotionalV2 {
         uint256 marketIndex,
         uint256 blockTime
     ) external view returns (int256, int256);
+
+    function getPresentfCashValue(
+        uint16 currencyId,
+        uint256 maturity,
+        int256 notional,
+        uint256 blockTime,
+        bool riskAdjusted
+    ) external view returns (int256 presentValue);
     
     function safeTransferFrom(
         address from,
@@ -47,6 +55,7 @@ interface INotionalV2 {
         uint256 amount,
         bytes calldata data
     ) external payable;
+
     function settleAccount(address account) external;
 
     function withdraw(

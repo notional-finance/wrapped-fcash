@@ -1,8 +1,8 @@
 import pytest
 import brownie
 import eth_abi
-from tests.helpers import get_balance_trade_action
-from brownie import Contract, WrappedfCash, network, nUpgradeableBeacon
+from tests.helpers import get_balance_trade_action, get_lend_action
+from brownie import Contract, wfCashERC4626, network, nUpgradeableBeacon
 from brownie.convert.datatypes import Wei
 from brownie.convert import to_bytes
 from brownie.network import Chain
@@ -25,8 +25,8 @@ def env():
         return getEnvironment('kovan')
 
 @pytest.fixture() 
-def beacon(WrappedfCash, nUpgradeableBeacon, env):
-    impl = WrappedfCash.deploy(env.notional.address, {"from": env.deployer})
+def beacon(wfCashERC4626, nUpgradeableBeacon, env):
+    impl = wfCashERC4626.deploy(env.notional.address, {"from": env.deployer})
     return nUpgradeableBeacon.deploy(impl.address, {"from": env.deployer})
 
 @pytest.fixture() 
@@ -37,7 +37,7 @@ def factory(WrappedfCashFactory, beacon, env):
 def wrapper(factory, env):
     markets = env.notional.getActiveMarkets(2)
     txn = factory.deployWrapper(2, markets[0][1])
-    return Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], WrappedfCash.abi)
+    return Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
 
 @pytest.fixture() 
 def lender(env, accounts):
@@ -97,7 +97,7 @@ def test_deploy_wrapped_fcash(factory, env):
     txn = factory.deployWrapper(2, markets[0][1], {"from": env.deployer})
     assert txn.events['WrapperDeployed']['wrapper'] == computedAddress
 
-    wrapper = Contract.from_abi("Wrapper", computedAddress, WrappedfCash.abi)
+    wrapper = Contract.from_abi("Wrapper", computedAddress, wfCashERC4626.abi)
     assert wrapper.getCurrencyId() == 2
     assert wrapper.getMaturity() == markets[0][1]
     assert wrapper.name() == "Wrapped fDAI @ {}".format(markets[0][1])
@@ -132,7 +132,7 @@ def test_cannot_deploy_invalid_maturity(factory, env):
 
 # Test Minting fCash
 def test_only_accepts_notional_v2(wrapper, beacon, lender, env):
-    impl = WrappedfCash.deploy(env.deployer.address, {"from": env.deployer})
+    impl = wfCashERC4626.deploy(env.deployer.address, {"from": env.deployer})
 
     # Change the address of notional on the beacon
     beacon.upgradeTo(impl.address)
@@ -151,7 +151,7 @@ def test_only_accepts_notional_v2(wrapper, beacon, lender, env):
 def test_cannot_transfer_invalid_fcash(lender, factory, env):
     markets = env.notional.getActiveMarkets(2)
     txn = factory.deployWrapper(2, markets[1][1])
-    wrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], WrappedfCash.abi)
+    wrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
     fCashId = env.notional.encodeToId(2, markets[0][1], 1)
 
     with brownie.reverts():
@@ -370,7 +370,7 @@ def test_mint_and_redeem_fcash_via_underlying(wrapper, lender, env):
 def test_mint_and_redeem_fusdc_via_underlying(factory, env):
     markets = env.notional.getActiveMarkets(2)
     txn = factory.deployWrapper(3, markets[0][1])
-    wrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], WrappedfCash.abi)
+    wrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
 
     env.tokens["USDC"].approve(wrapper.address, 2 ** 255 - 1, {'from': env.whales["USDC"].address})
     wrapper.mint(
@@ -515,21 +515,79 @@ def test_lend_via_erc1155_action_underlying_token(wrapper, env, accounts):
     portfolio = env.notional.getAccount(acct.address)[2]
     assert len(portfolio) == 0
 
-def get_lend_action(currencyId, tradeActionData, depositUnderlying):
-    tradeActions = [get_trade_action(**t) for t in tradeActionData]
-    return (currencyId, depositUnderlying, tradeActions)
+# ERC4626 tests
+def test_deposit_4626(wrapper, env, lender):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
 
-def get_trade_action(**kwargs):
-    tradeActionType = kwargs["tradeActionType"]
+    preview = wrapper.previewDeposit(100e18)
+    wrapper.deposit(100e18, lender.address, {"from": lender})
 
-    if tradeActionType == "Lend":
-        return eth_abi.packed.encode_abi_packed(
-            ["uint8", "uint8", "uint88", "uint32", "uint120"],
-            [
-                0, # 0 == lend
-                kwargs["marketIndex"],
-                int(kwargs["notional"]),
-                int(kwargs["minSlippage"]),
-                0,
-            ],
-        )
+    assert wrapper.balanceOf(lender.address) == preview
+
+def test_deposit_receiver_4626(wrapper, env, lender, accounts):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+
+    preview = wrapper.previewDeposit(100e18)
+    wrapper.deposit(100e18, accounts[0].address, {"from": lender})
+
+    assert wrapper.balanceOf(accounts[0].address) == preview
+    assert wrapper.balanceOf(lender.address) == 0
+
+def test_deposit_matured_4626(wrapper, env, lender):
+    chain.mine(1, timestamp=wrapper.getMaturity())
+
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+
+    with brownie.reverts("Matured"):
+        wrapper.previewDeposit(100e18)
+
+    with brownie.reverts("Max Deposit"):
+        wrapper.deposit(100e18, lender.address, {"from": lender})
+
+@pytest.mark.only
+def test_mint_4626(wrapper, env, lender):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+
+    preview = wrapper.previewMint(100e8)
+    wrapper.mint(100e8, lender.address, {"from": lender})
+
+    assert wrapper.balanceOf(lender.address) == 100e8
+
+# @pytest.mark.only
+# def test_mint_receiver_4626(wrapper, env, lender, accounts):
+#     pass
+
+# @pytest.mark.only
+# def test_mint_matured_4626(wrapper, env, lender):
+#     pass
+
+
+
+
+def test_withdraw_4626(wrapper, env, accounts):
+    pass
+
+def test_withdraw_receiver_4626(wrapper, env, accounts):
+    pass
+
+def test_withdraw_allowance_4626(wrapper, env, accounts):
+    pass
+
+def test_withdraw_matured_4626(wrapper, env, accounts):
+    pass
+
+def test_redeem_4626(wrapper, env, accounts):
+    pass
+
+def test_redeem_receiver_4626(wrapper, env, accounts):
+    pass
+
+def test_redeem_allowance_4626(wrapper, env, accounts):
+    pass
+
+def test_redeem_matured_4626(wrapper, env, accounts):
+    pass

@@ -131,7 +131,7 @@ abstract contract wfCashBase is ERC777Upgradeable, IWrappedfCash {
 
     /// @notice Returns the asset token which the fCash settles to. This will be an interest
     /// bearing token like a cToken or aToken.
-    function getAssetToken() public view override returns (IERC20 underlyingToken, int256 underlyingPrecision, TokenType tokenType) {
+    function getAssetToken() public view override returns (IERC20 assetToken, int256 underlyingPrecision, TokenType tokenType) {
         (Token memory asset, /* Token memory underlying */) = NotionalV2.getCurrency(getCurrencyId());
         return (IERC20(asset.tokenAddress), asset.decimals, asset.tokenType);
     }
