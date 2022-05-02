@@ -26,19 +26,37 @@ interface INotionalV2 {
             uint256 lastClaimTime
         );
 
-    function getfCashAmountGivenCashAmount(
+   function getfCashLendFromDeposit(
         uint16 currencyId,
-        int88 netCashToAccount,
-        uint256 marketIndex,
-        uint256 blockTime
-    ) external view returns (int256);
+        uint256 depositAmountExternal,
+        uint256 maturity,
+        uint32 minLendRate,
+        uint256 blockTime,
+        bool useUnderlying
+    ) external view returns (
+        uint88 fCashAmount,
+        uint8 marketIndex,
+        bytes32 encodedTrade
+    );
 
-    function getCashAmountGivenfCashAmount(
+    function getDepositFromfCashLend(
         uint16 currencyId,
-        int88 fCashAmount,
-        uint256 marketIndex,
+        uint256 fCashAmount,
+        uint256 maturity,
+        uint32 minLendRate,
         uint256 blockTime
-    ) external view returns (int256, int256);
+    ) external view returns (
+        uint256 depositAmountUnderlying,
+        uint256 depositAmountAsset,
+        uint8 marketIndex,
+        bytes32 encodedTrade
+    );
+
+    function convertCashBalanceToExternal(
+        uint16 currencyId,
+        int256 cashBalanceInternal,
+        bool useUnderlying
+    ) external view returns (int256);
 
     function getPresentfCashValue(
         uint16 currencyId,

@@ -15,56 +15,88 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4262-totalAssets} */
     function totalAssets() public view override returns (uint256) {
-        // TODO: if has matured convert cash balance share...
+        if (hasMatured()) {
+            // If the fCash has matured we use the cash balance instead
+            uint16 currencyId = getCurrencyId();
+            (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
+            int256 underlyingExternal = NotionalV2.convertCashBalanceToExternal(currencyId, cashBalance, true);
+            require(underlyingExternal > 0);
+            return uint256(underlyingExternal);
+        } else {
+            (/* */, int256 precision) = getUnderlyingToken();
+            // Get the present value of the fCash held by the contract, this is returned in 8 decimal precision
+            int256 pvInternal = NotionalV2.getPresentfCashValue(
+                getCurrencyId(),
+                getMaturity(),
+                int256(totalSupply()), // total supply cannot overflow as fCash overflows at uint88
+                block.timestamp,
+                false
+            );
 
-        int256 pv = NotionalV2.getPresentfCashValue(
-            getCurrencyId(),
-            getMaturity(),
-            int256(totalSupply()), // total supply cannot overflow as fCash overflows at uint88
-            block.timestamp,
-            false
-        );
-
-        // PV should always be >= 0
-        require(pv >= 0);
-        return uint256(pv);
+            int256 pvExternal = (pvInternal * precision) / Constants.INTERNAL_TOKEN_PRECISION;
+            // PV should always be >= 0 since we are lending
+            require(pvExternal >= 0);
+            return uint256(pvExternal);
+        }
     }
 
     /** @dev See {IERC4262-convertToShares} */
     function convertToShares(uint256 assets) public view override returns (uint256 shares) {
-        (/* */, int256 precision) = getUnderlyingToken();
-        uint256 underlyingCashInternal = (assets * uint256(Constants.INTERNAL_TOKEN_PRECISION)) / uint256(precision);
+        if (hasMatured()) {
+            // If the fCash has matured we use the cash balance instead
+            uint16 currencyId = getCurrencyId();
+            (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
+            int256 underlyingExternal = NotionalV2.convertCashBalanceToExternal(currencyId, cashBalance, true);
+            require(underlyingExternal > 0);
 
-        // TODO: if has matured convert cash balance share...
+            // The withdraw calculation is:
+            // shares * cashBalance / totalSupply = cashBalanceShare
+            //
+            // Converting this to underlying external:
+            // shares * convert(cashBalance) / totalSupply = underlyingExternalShare
+            // shares * underlyingExternal / totalSupply = underlyingExternalShare
+            // shares * underlyingExternal / totalSupply = assets
+            // shares = (assets * totalSupply) / underlyingExternal
+            return (assets * totalSupply()) / uint256(underlyingExternal); // uint256 overflow checked above
+        } else {
+            // This is how much fCash received from depositing assets
+            (uint256 fCashAmount, /* */, /* */) = NotionalV2.getfCashLendFromDeposit(
+                getCurrencyId(),
+                assets,
+                getMaturity(),
+                0,
+                block.timestamp,
+                true
+            );
 
-        int256 fCashAmount = NotionalV2.getfCashAmountGivenCashAmount(
-            getCurrencyId(),
-            _safeNegInt88(underlyingCashInternal),
-            getMarketIndex(),
-            block.timestamp
-        );
-        require(fCashAmount > 0);
-
-        // Overflow checked above.
-        return uint256(fCashAmount);
+            return fCashAmount;
+        }
     }
 
     /** @dev See {IERC4262-convertToAssets} */
     function convertToAssets(uint256 shares) public view override returns (uint256 assets) {
-        // TODO: if has matured convert cash balance share...
+        if (hasMatured()) {
+            // If the fCash has matured we use the cash balance instead
+            uint16 currencyId = getCurrencyId();
+            (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
+            int256 underlyingExternal = NotionalV2.convertCashBalanceToExternal(currencyId, cashBalance, true);
+            require(underlyingExternal > 0);
 
-        (/*  */, int256 underlyingCashInternal) = NotionalV2.getCashAmountGivenfCashAmount(
-            getCurrencyId(),
-            _safeNegInt88(shares),
-            getMarketIndex(),
-            block.timestamp
-        );
+            // The withdraw calculation is:
+            // shares * cashBalance / totalSupply = cashBalanceShare
+            return (shares * uint256(underlyingExternal)) / totalSupply(); // uint256 overflow checked above
+        } else {
+            // This is how much underlying it will require to lend the fCash
+            (uint256 depositAmountUnderlying, /* */, /* */, /* */) = NotionalV2.getDepositFromfCashLend(
+                getCurrencyId(),
+                shares,
+                getMaturity(),
+                0,
+                block.timestamp
+            );
 
-        (/* */, int256 precision) = getUnderlyingToken();
-        int256 underlyingCashExternal = (underlyingCashInternal * precision) / Constants.INTERNAL_TOKEN_PRECISION;
-        require(underlyingCashExternal > 0);
-
-        return uint256(underlyingCashExternal);
+            return depositAmountUnderlying;
+        }
     }
 
     /** @dev See {IERC4262-maxDeposit} */
