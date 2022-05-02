@@ -18,4 +18,7 @@ def main():
             "implementation": impl.address,
             "beacon": beacon.address,
             "factory": factory.address
-        }, f)
+        }, f, indent=4, sort_keys=True)
+
+    with open("abi/WrappedfCash.json", "w") as f:
+        json.dump(wfCashERC4626.abi, f, indent=4, sort_keys=True)
