@@ -32,9 +32,10 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         } else {
             (/* */, int256 precision) = getUnderlyingToken();
             // Get the present value of the fCash held by the contract, this is returned in 8 decimal precision
+            (uint16 currencyId, uint40 maturity) = getDecodedID();
             int256 pvInternal = NotionalV2.getPresentfCashValue(
-                getCurrencyId(),
-                getMaturity(),
+                currencyId,
+                maturity,
                 int256(totalSupply()), // total supply cannot overflow as fCash overflows at uint88
                 block.timestamp,
                 false
@@ -63,10 +64,11 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
             return (assets * totalSupply()) / underlyingExternal; // uint256 overflow checked above
         } else {
             // This is how much fCash received from depositing assets
+            (uint16 currencyId, uint40 maturity) = getDecodedID();
             (uint256 fCashAmount, /* */, /* */) = NotionalV2.getfCashLendFromDeposit(
-                getCurrencyId(),
+                currencyId,
                 assets,
-                getMaturity(),
+                maturity,
                 0,
                 block.timestamp,
                 true
@@ -86,10 +88,11 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
             return (shares * underlyingExternal) / totalSupply(); // uint256 overflow checked above
         } else {
             // This is how much underlying it will require to lend the fCash
+            (uint16 currencyId, uint40 maturity) = getDecodedID();
             (uint256 depositAmountUnderlying, /* */, /* */, /* */) = NotionalV2.getDepositFromfCashLend(
-                getCurrencyId(),
+                currencyId,
                 shares,
-                getMaturity(),
+                maturity,
                 0,
                 block.timestamp
             );
@@ -136,10 +139,11 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
             shares = convertToShares(assets);
         } else {
             // If withdrawing non-matured assets, we sell them on the market (i.e. borrow)
+            (uint16 currencyId, uint40 maturity) = getDecodedID();
             (shares, /* */, /* */) = NotionalV2.getfCashBorrowFromPrincipal(
-                getCurrencyId(),
+                currencyId,
                 assets,
-                getMaturity(),
+                maturity,
                 0,
                 block.timestamp,
                 true
@@ -153,10 +157,11 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
             assets = convertToAssets(shares);
         } else {
             // If withdrawing non-matured assets, we sell them on the market (i.e. borrow)
+            (uint16 currencyId, uint40 maturity) = getDecodedID();
             (assets, /* */, /* */, /* */) = NotionalV2.getPrincipalFromfCashBorrow(
-                getCurrencyId(),
+                currencyId,
                 shares,
-                getMaturity(),
+                maturity,
                 0,
                 block.timestamp
             );
