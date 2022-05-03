@@ -1,0 +1,19 @@
+{
+    "DeployWrapper": 547670,
+    "DepositViaERC4626": 531550,
+    "MintViaAssetToken": 459548,
+    "MintViaERC1155Transfer": 130843,
+    "MintViaERC1155TransferAndLendAsset": 358786,
+    "MintViaERC1155TransferAndLendUnderlying": 397181,
+    "MintViaERC4626": 602411,
+    "MintViaUnderlyingToken": 464639,
+    "RedeemToAsset": 329292,
+    "RedeemToAssetMatured": 201352,
+    "RedeemToERC1155": 137985,
+    "RedeemToUnderlying": 323589,
+    "RedeemToUnderlyingMatured": 242708,
+    "RedeemViaERC4626": 349588,
+    "RedeemViaERC4626Matured": 263594,
+    "WithdrawViaERC4626": 481161,
+    "WithdrawViaERC4626Matured": 305506
+}

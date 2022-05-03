@@ -32,7 +32,9 @@ Before or after maturity, redeeming wfCash can be done by calling `redeem`, `red
 
 ## Gas Costs
 
-TBD
+Gas costs are estimated in `scripts/gas_costs.py` and the current output can be seen in `gas_costs.json`. ERC4626 adds significant gas costs and also does not allow the user to specify slippage thresholds, however, it does provide a very simple access point into wrapped fCash.
+
+Using asset tokens is the most gas efficient (and probably capital efficient) way to access wrapped fCash. Using ERC1155 transfer and batchLend calls saves 1 or 2 ERC20 token transfers and therefore will save about 100k gas (about 20%).
 
 ## Code Stats
 
