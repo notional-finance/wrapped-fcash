@@ -16,21 +16,32 @@ abstract contract wfCashLogic is wfCashBase, AllowfCashReceiver, ReentrancyGuard
 
     /***** Mint Methods *****/
 
-    /// @notice Lends cashAmount in return for fCashAmount. This method does not work with ETH,
-    /// use cETH or aETH instead with the "useUnderlying" flag set to false
+    /// @notice Lends deposit amount in return for fCashAmount using cTokens or aTokens
     /// @param depositAmountExternal amount of cash to deposit into this method
     /// @param fCashAmount amount of fCash to purchase (lend)
     /// @param receiver address to receive the fCash shares
     /// @param minImpliedRate minimum annualized interest rate to lend at
-    /// @param useUnderlying set to true to use the underlying token
-    function mint(
+    function mintViaAsset(
         uint256 depositAmountExternal,
         uint88 fCashAmount,
         address receiver,
-        uint32 minImpliedRate,
-        bool useUnderlying
+        uint32 minImpliedRate
     ) external override {
-        _mintInternal(depositAmountExternal, fCashAmount, receiver, minImpliedRate, useUnderlying);
+        _mintInternal(depositAmountExternal, fCashAmount, receiver, minImpliedRate, false);
+    }
+
+    /// @notice Lends deposit amount in return for fCashAmount using underlying tokens
+    /// @param depositAmountExternal amount of cash to deposit into this method
+    /// @param fCashAmount amount of fCash to purchase (lend)
+    /// @param receiver address to receive the fCash shares
+    /// @param minImpliedRate minimum annualized interest rate to lend at
+    function mintViaUnderlying(
+        uint256 depositAmountExternal,
+        uint88 fCashAmount,
+        address receiver,
+        uint32 minImpliedRate
+    ) external override {
+        _mintInternal(depositAmountExternal, fCashAmount, receiver, minImpliedRate, true);
     }
 
     function _mintInternal(

@@ -307,21 +307,19 @@ def test_redeem_failure_slippage(wrapper, lender, env):
 def test_mint_failure_slippage(wrapper, lender, env):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
     with brownie.reverts():
-        wrapper.mint(
+        wrapper.mintViaUnderlying(
             10_000e18,
             10_000e8,
             lender.address,
             0.2e9,
-            True,
             {'from': lender}
         )
 
-    wrapper.mint(
+    wrapper.mintViaUnderlying(
         10_000e18,
         10_000e8,
         lender.address,
         0.01e9,
-        True,
         {'from': lender}
     )
 
@@ -330,12 +328,11 @@ def test_mint_failure_slippage(wrapper, lender, env):
 
 def test_mint_and_redeem_fcash_via_underlying(wrapper, lender, env):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender.address})
-    wrapper.mint(
+    wrapper.mintViaUnderlying(
         10_000e18,
         10_000e8,
         lender.address,
         0,
-        True,
         {'from': lender.address}
     )
     assert env.tokens["cDAI"].balanceOf(wrapper.address) == 0
@@ -373,12 +370,11 @@ def test_mint_and_redeem_fusdc_via_underlying(factory, env):
     wrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
 
     env.tokens["USDC"].approve(wrapper.address, 2 ** 255 - 1, {'from': env.whales["USDC"].address})
-    wrapper.mint(
+    wrapper.mintViaUnderlying(
         10_000e6,
         10_000e8,
         env.whales["USDC"].address,
         0,
-        True,
         {'from': env.whales["USDC"].address}
     )
     assert env.tokens["cUSDC"].balanceOf(wrapper.address) == 0
@@ -416,11 +412,10 @@ def test_mint_and_redeem_fcash_via_asset(wrapper, env, accounts):
     env.tokens["cDAI"].mint(100_000e18, {'from': acct})
     env.tokens["cDAI"].approve(wrapper.address, 2**255-1, {'from': acct})
 
-    wrapper.mint(
+    wrapper.mintViaAsset(
         500_000e8,
         10_000e8,
         acct.address,
-        False,
         0,
         {'from': acct}
     )
