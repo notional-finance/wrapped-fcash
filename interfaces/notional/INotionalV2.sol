@@ -52,6 +52,32 @@ interface INotionalV2 {
         bytes32 encodedTrade
     );
 
+    function getPrincipalFromfCashBorrow(
+        uint16 currencyId,
+        uint256 fCashBorrow,
+        uint256 maturity,
+        uint32 maxBorrowRate,
+        uint256 blockTime
+    ) external view returns (
+        uint256 borrowAmountUnderlying,
+        uint256 borrowAmountAsset,
+        uint8 marketIndex,
+        bytes32 encodedTrade
+    );    
+
+    function getfCashBorrowFromPrincipal(
+        uint16 currencyId,
+        uint256 borrowedAmountExternal,
+        uint256 maturity,
+        uint32 maxBorrowRate,
+        uint256 blockTime,
+        bool useUnderlying
+    ) external view returns (
+        uint88 fCashDebt,
+        uint8 marketIndex,
+        bytes32 encodedTrade
+    );
+
     function convertCashBalanceToExternal(
         uint16 currencyId,
         int256 cashBalanceInternal,

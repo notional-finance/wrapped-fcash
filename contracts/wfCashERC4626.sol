@@ -13,17 +13,22 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         return address(underlyingToken);
     }
 
+    function _getMaturedUnderlyingExternal() private view returns (uint256) {
+        // If the fCash has matured we use the cash balance instead.
+        uint16 currencyId = getCurrencyId();
+        // We cannot settle an account in a view method, so this may fail if the account has not been settled
+        // after maturity. This can be done by anyone so it should not be an issue
+        (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
+        int256 underlyingExternal = NotionalV2.convertCashBalanceToExternal(currencyId, cashBalance, true);
+        require(underlyingExternal > 0, "Must Settle");
+
+        return uint256(underlyingExternal);
+    }
+
     /** @dev See {IERC4262-totalAssets} */
     function totalAssets() public view override returns (uint256) {
         if (hasMatured()) {
-            // If the fCash has matured we use the cash balance instead.
-            uint16 currencyId = getCurrencyId();
-            // We cannot settle an account in a view method, so this may fail if the account has not been settled
-            // after maturity. This can be done by anyone so it should not be an issue
-            (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
-            int256 underlyingExternal = NotionalV2.convertCashBalanceToExternal(currencyId, cashBalance, true);
-            require(underlyingExternal > 0, "Must Settle");
-            return uint256(underlyingExternal);
+            return _getMaturedUnderlyingExternal();
         } else {
             (/* */, int256 precision) = getUnderlyingToken();
             // Get the present value of the fCash held by the contract, this is returned in 8 decimal precision
@@ -45,13 +50,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     /** @dev See {IERC4262-convertToShares} */
     function convertToShares(uint256 assets) public view override returns (uint256 shares) {
         if (hasMatured()) {
-            // If the fCash has matured we use the cash balance instead
-            uint16 currencyId = getCurrencyId();
-            // We cannot settle an account in a view method, so this may fail if the account has not been settled
-            // after maturity. This can be done by anyone so it should not be an issue
-            (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
-            int256 underlyingExternal = NotionalV2.convertCashBalanceToExternal(currencyId, cashBalance, true);
-            require(underlyingExternal > 0, "Must Settle");
+            uint256 underlyingExternal = _getMaturedUnderlyingExternal();
 
             // The withdraw calculation is:
             // shares * cashBalance / totalSupply = cashBalanceShare
@@ -61,7 +60,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
             // shares * underlyingExternal / totalSupply = underlyingExternalShare
             // shares * underlyingExternal / totalSupply = assets
             // shares = (assets * totalSupply) / underlyingExternal
-            return (assets * totalSupply()) / uint256(underlyingExternal); // uint256 overflow checked above
+            return (assets * totalSupply()) / underlyingExternal; // uint256 overflow checked above
         } else {
             // This is how much fCash received from depositing assets
             (uint256 fCashAmount, /* */, /* */) = NotionalV2.getfCashLendFromDeposit(
@@ -80,15 +79,11 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     /** @dev See {IERC4262-convertToAssets} */
     function convertToAssets(uint256 shares) public view override returns (uint256 assets) {
         if (hasMatured()) {
-            // If the fCash has matured we use the cash balance instead
-            uint16 currencyId = getCurrencyId();
-            (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
-            int256 underlyingExternal = NotionalV2.convertCashBalanceToExternal(currencyId, cashBalance, true);
-            require(underlyingExternal > 0);
+            uint256 underlyingExternal = _getMaturedUnderlyingExternal();
 
             // The withdraw calculation is:
             // shares * cashBalance / totalSupply = cashBalanceShare
-            return (shares * uint256(underlyingExternal)) / totalSupply(); // uint256 overflow checked above
+            return (shares * underlyingExternal) / totalSupply(); // uint256 overflow checked above
         } else {
             // This is how much underlying it will require to lend the fCash
             (uint256 depositAmountUnderlying, /* */, /* */, /* */) = NotionalV2.getDepositFromfCashLend(
@@ -132,19 +127,40 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     /** @dev See {IERC4262-previewMint} */
     function previewMint(uint256 shares) public view override returns (uint256) {
         require(!hasMatured(), "Matured");
-        uint256 assets = convertToAssets(shares);
-        return assets + (convertToShares(assets) < shares ? 1 : 0);
+        return convertToAssets(shares);
     }
 
     /** @dev See {IERC4262-previewWithdraw} */
-    function previewWithdraw(uint256 assets) public view override returns (uint256) {
-        uint256 shares = convertToShares(assets);
-        return shares + (convertToAssets(shares) < assets ? 1 : 0);
+    function previewWithdraw(uint256 assets) public view override returns (uint256 shares) {
+        if (hasMatured()) {
+            shares = convertToShares(assets);
+        } else {
+            // If withdrawing non-matured assets, we sell them on the market (i.e. borrow)
+            (shares, /* */, /* */) = NotionalV2.getfCashBorrowFromPrincipal(
+                getCurrencyId(),
+                assets,
+                getMaturity(),
+                0,
+                block.timestamp,
+                true
+            );
+        }
     }
 
     /** @dev See {IERC4262-previewRedeem} */
-    function previewRedeem(uint256 shares) public view override returns (uint256) {
-        return convertToAssets(shares);
+    function previewRedeem(uint256 shares) public view override returns (uint256 assets) {
+        if (hasMatured()) {
+            assets = convertToAssets(shares);
+        } else {
+            // If withdrawing non-matured assets, we sell them on the market (i.e. borrow)
+            (assets, /* */, /* */, /* */) = NotionalV2.getPrincipalFromfCashBorrow(
+                getCurrencyId(),
+                shares,
+                getMaturity(),
+                0,
+                block.timestamp
+            );
+        }
     }
 
     /** @dev See {IERC4262-deposit} */

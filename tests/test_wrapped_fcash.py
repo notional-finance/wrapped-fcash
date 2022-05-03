@@ -590,9 +590,8 @@ def test_withdraw_4626(wrapper, env, lender, accounts):
     wrapper.withdraw(50e18, lender.address, lender.address, {'from': lender.address})
     balanceAfter = wrapper.balanceOf(lender.address)
     daiBalanceAfter = env.tokens["DAI"].balanceOf(lender.address)
-    # TODO: these are off...
     assert balanceBefore - balanceAfter == shares
-    assert daiBalanceAfter - daiBalanceBefore == 50e18
+    assert pytest.approx(daiBalanceAfter - daiBalanceBefore, rel=1e-9) == 50e18
 
 def test_withdraw_receiver_4626(wrapper, env, lender, accounts):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
@@ -603,8 +602,7 @@ def test_withdraw_receiver_4626(wrapper, env, lender, accounts):
     shares = wrapper.previewWithdraw(50e18)
     wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': lender.address})
     assert wrapper.balanceOf(lender.address) == balanceBefore - shares
-    # TODO: these are off...
-    assert env.tokens['DAI'].balanceOf(accounts[0].address) == 50e18
+    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), rel=1e-9) == 50e18
 
 def test_withdraw_allowance_4626(wrapper, env, lender, accounts):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
@@ -625,8 +623,7 @@ def test_withdraw_allowance_4626(wrapper, env, lender, accounts):
     shares = wrapper.previewWithdraw(50e18)
     wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': accounts[0].address})
     assert wrapper.balanceOf(lender.address) == balanceBefore - shares
-    # TODO: these are off...
-    assert env.tokens['DAI'].balanceOf(accounts[0].address) == 50e18
+    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), rel=1e-9) == 50e18
 
 def test_withdraw_matured_4626(wrapper, env, lender, accounts):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
@@ -657,9 +654,7 @@ def test_redeem_4626(wrapper, env, lender, accounts):
     balanceAfter = wrapper.balanceOf(lender.address)
     daiBalanceAfter = env.tokens["DAI"].balanceOf(lender.address)
     assert balanceBefore - balanceAfter == 50e8
-
-    # TODO: these are off...
-    assert daiBalanceAfter - daiBalanceBefore == assets
+    assert pytest.approx(daiBalanceAfter - daiBalanceBefore, rel=1e-9) == assets
 
 def test_redeem_receiver_4626(wrapper, env, accounts, lender):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
@@ -670,8 +665,7 @@ def test_redeem_receiver_4626(wrapper, env, accounts, lender):
     assets = wrapper.previewRedeem(100e8)
     wrapper.redeem(100e8, accounts[0].address, lender.address, {'from': lender.address})
     assert wrapper.balanceOf(lender.address) == 0
-    # TODO: these are off...
-    assert env.tokens['DAI'].balanceOf(accounts[0].address) == assets
+    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), rel=1e-9) == assets
 
 def test_redeem_allowance_4626(wrapper, env, accounts, lender):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
@@ -692,8 +686,7 @@ def test_redeem_allowance_4626(wrapper, env, accounts, lender):
     assets = wrapper.previewRedeem(50e8)
     wrapper.redeem(50e8, accounts[0].address, lender.address, {'from': accounts[0].address})
     assert wrapper.balanceOf(lender.address) == balanceBefore - 50e8
-    # TODO: these are off...
-    assert env.tokens['DAI'].balanceOf(accounts[0].address) == assets
+    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), rel=1e-9) == assets
 
 def test_redeem_matured_4626(wrapper, env, accounts, lender):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
