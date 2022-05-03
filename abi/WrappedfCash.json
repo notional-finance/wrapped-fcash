@@ -820,14 +820,37 @@
                 "internalType": "uint32",
                 "name": "minImpliedRate",
                 "type": "uint32"
-            },
-            {
-                "internalType": "bool",
-                "name": "useUnderlying",
-                "type": "bool"
             }
         ],
-        "name": "mint",
+        "name": "mintViaAsset",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "depositAmountExternal",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint88",
+                "name": "fCashAmount",
+                "type": "uint88"
+            },
+            {
+                "internalType": "address",
+                "name": "receiver",
+                "type": "address"
+            },
+            {
+                "internalType": "uint32",
+                "name": "minImpliedRate",
+                "type": "uint32"
+            }
+        ],
+        "name": "mintViaUnderlying",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -1034,7 +1057,7 @@
         "outputs": [
             {
                 "internalType": "uint256",
-                "name": "",
+                "name": "assets",
                 "type": "uint256"
             }
         ],
@@ -1053,7 +1076,7 @@
         "outputs": [
             {
                 "internalType": "uint256",
-                "name": "",
+                "name": "shares",
                 "type": "uint256"
             }
         ],
