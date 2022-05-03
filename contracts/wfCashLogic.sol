@@ -130,6 +130,7 @@ abstract contract wfCashLogic is wfCashBase, AllowfCashReceiver, ReentrancyGuard
     /// @dev re-entrancy is protected on _burn
     function redeem(uint256 amount, RedeemOpts memory opts) public override {
         bytes memory data = abi.encode(opts);
+        // In this case, the owner is msg.sender based on the OZ ERC777 implementation
         burn(amount, data);
     }
 
@@ -202,7 +203,7 @@ abstract contract wfCashLogic is wfCashBase, AllowfCashReceiver, ReentrancyGuard
             // Transfer withdrawn tokens to the `from` address
             _withdrawCashToAccount(
                 currencyId,
-                from,
+                opts.receiver,
                 _safeUint88(assetInternalCashClaim),
                 opts.redeemToUnderlying
             );

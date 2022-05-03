@@ -547,47 +547,167 @@ def test_deposit_matured_4626(wrapper, env, lender):
     with brownie.reverts("Max Deposit"):
         wrapper.deposit(100e18, lender.address, {"from": lender})
 
-@pytest.mark.only
 def test_mint_4626(wrapper, env, lender):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
     env.tokens["cDAI"].accrueInterest({"from": lender})
+    daiBalanceBefore = env.tokens["DAI"].balanceOf(lender.address)
 
-    preview = wrapper.previewMint(100e8)
+    assets = wrapper.previewMint(100e8)
     wrapper.mint(100e8, lender.address, {"from": lender})
+    daiBalanceAfter = env.tokens["DAI"].balanceOf(lender.address)
 
+    assert pytest.approx(daiBalanceBefore - daiBalanceAfter, abs=1) == assets
     assert wrapper.balanceOf(lender.address) == 100e8
 
-# @pytest.mark.only
-# def test_mint_receiver_4626(wrapper, env, lender, accounts):
-#     pass
+def test_mint_receiver_4626(wrapper, env, lender, accounts):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+    daiBalanceBefore = env.tokens["DAI"].balanceOf(lender.address)
 
-# @pytest.mark.only
-# def test_mint_matured_4626(wrapper, env, lender):
-#     pass
+    assets = wrapper.previewMint(100e8)
+    wrapper.mint(100e8, accounts[0].address, {"from": lender})
+    daiBalanceAfter = env.tokens["DAI"].balanceOf(lender.address)
 
+    assert pytest.approx(daiBalanceBefore - daiBalanceAfter, abs=1) == assets
+    assert wrapper.balanceOf(lender.address) == 0
+    assert wrapper.balanceOf(accounts[0].address) == 100e8
 
+def test_mint_deposit_matured_4626(wrapper, env, lender):
+    chain.mine(1, timestamp=wrapper.getMaturity())
 
+    with brownie.reverts("Matured"):
+        wrapper.mint(100e8, lender.address, {"from": lender})
+        wrapper.deposit(100e18, lender.address, {"from": lender})
 
-def test_withdraw_4626(wrapper, env, accounts):
-    pass
+def test_withdraw_4626(wrapper, env, lender, accounts):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+    wrapper.mint(100e8, lender.address, {"from": lender})
+    balanceBefore = wrapper.balanceOf(lender.address)
+    daiBalanceBefore = env.tokens["DAI"].balanceOf(lender.address)
 
-def test_withdraw_receiver_4626(wrapper, env, accounts):
-    pass
+    shares = wrapper.previewWithdraw(50e18)
+    wrapper.withdraw(50e18, lender.address, lender.address, {'from': lender.address})
+    balanceAfter = wrapper.balanceOf(lender.address)
+    daiBalanceAfter = env.tokens["DAI"].balanceOf(lender.address)
+    # TODO: these are off...
+    assert balanceBefore - balanceAfter == shares
+    assert daiBalanceAfter - daiBalanceBefore == 50e18
 
-def test_withdraw_allowance_4626(wrapper, env, accounts):
-    pass
+def test_withdraw_receiver_4626(wrapper, env, lender, accounts):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+    wrapper.mint(100e8, lender.address, {"from": lender})
+    balanceBefore = wrapper.balanceOf(lender.address)
 
-def test_withdraw_matured_4626(wrapper, env, accounts):
-    pass
+    shares = wrapper.previewWithdraw(50e18)
+    wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': lender.address})
+    assert wrapper.balanceOf(lender.address) == balanceBefore - shares
+    # TODO: these are off...
+    assert env.tokens['DAI'].balanceOf(accounts[0].address) == 50e18
 
-def test_redeem_4626(wrapper, env, accounts):
-    pass
+def test_withdraw_allowance_4626(wrapper, env, lender, accounts):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+    wrapper.mint(100e8, lender.address, {"from": lender})
+    balanceBefore = wrapper.balanceOf(lender.address)
 
-def test_redeem_receiver_4626(wrapper, env, accounts):
-    pass
+    with brownie.reverts("ERC777: insufficient allowance"):
+        # No allowance set
+        wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': accounts[0].address})
+    wrapper.approve(accounts[0].address, 10e8, {'from': lender})
 
-def test_redeem_allowance_4626(wrapper, env, accounts):
-    pass
+    with brownie.reverts("ERC777: insufficient allowance"):
+        # Insufficient allowance
+        wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': accounts[0].address})
+    wrapper.approve(accounts[0].address, 100e8, {'from': lender})
 
-def test_redeem_matured_4626(wrapper, env, accounts):
-    pass
+    shares = wrapper.previewWithdraw(50e18)
+    wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': accounts[0].address})
+    assert wrapper.balanceOf(lender.address) == balanceBefore - shares
+    # TODO: these are off...
+    assert env.tokens['DAI'].balanceOf(accounts[0].address) == 50e18
+
+def test_withdraw_matured_4626(wrapper, env, lender, accounts):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+    wrapper.mint(100e8, lender.address, {"from": lender})
+
+    chain.mine(1, timestamp=wrapper.getMaturity())
+    balanceBefore = wrapper.balanceOf(lender.address)
+
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+    env.notional.settleAccount(wrapper.address, {"from": lender})
+
+    shares = wrapper.previewWithdraw(50e18)
+    txn = wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': lender})
+    assert wrapper.balanceOf(lender.address) == balanceBefore - shares
+    assert env.tokens['DAI'].balanceOf(accounts[0].address) > 50e18
+    assert env.tokens['DAI'].balanceOf(accounts[0].address) < 50.1e18
+
+def test_redeem_4626(wrapper, env, lender, accounts):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+    wrapper.mint(100e8, lender.address, {"from": lender})
+    balanceBefore = wrapper.balanceOf(lender.address)
+    daiBalanceBefore = env.tokens["DAI"].balanceOf(lender.address)
+
+    assets = wrapper.previewRedeem(50e8)
+    wrapper.redeem(50e8, lender.address, lender.address, {'from': lender.address})
+    balanceAfter = wrapper.balanceOf(lender.address)
+    daiBalanceAfter = env.tokens["DAI"].balanceOf(lender.address)
+    assert balanceBefore - balanceAfter == 50e8
+
+    # TODO: these are off...
+    assert daiBalanceAfter - daiBalanceBefore == assets
+
+def test_redeem_receiver_4626(wrapper, env, accounts, lender):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+    wrapper.mint(100e8, lender.address, {"from": lender})
+    balanceBefore = wrapper.balanceOf(lender.address)
+
+    assets = wrapper.previewRedeem(100e8)
+    wrapper.redeem(100e8, accounts[0].address, lender.address, {'from': lender.address})
+    assert wrapper.balanceOf(lender.address) == 0
+    # TODO: these are off...
+    assert env.tokens['DAI'].balanceOf(accounts[0].address) == assets
+
+def test_redeem_allowance_4626(wrapper, env, accounts, lender):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+    wrapper.mint(100e8, lender.address, {"from": lender})
+    balanceBefore = wrapper.balanceOf(lender.address)
+
+    with brownie.reverts("ERC777: insufficient allowance"):
+        # No allowance set
+        wrapper.redeem(50e8, accounts[0].address, lender.address, {'from': accounts[0].address})
+    wrapper.approve(accounts[0].address, 10e8, {'from': lender})
+
+    with brownie.reverts("ERC777: insufficient allowance"):
+        # Insufficient allowance
+        wrapper.redeem(50e8, accounts[0].address, lender.address, {'from': accounts[0].address})
+    wrapper.approve(accounts[0].address, 100e8, {'from': lender})
+
+    assets = wrapper.previewRedeem(50e8)
+    wrapper.redeem(50e8, accounts[0].address, lender.address, {'from': accounts[0].address})
+    assert wrapper.balanceOf(lender.address) == balanceBefore - 50e8
+    # TODO: these are off...
+    assert env.tokens['DAI'].balanceOf(accounts[0].address) == assets
+
+def test_redeem_matured_4626(wrapper, env, accounts, lender):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+    wrapper.mint(100e8, lender.address, {"from": lender})
+
+    chain.mine(1, timestamp=wrapper.getMaturity())
+    balanceBefore = wrapper.balanceOf(lender.address)
+
+    env.tokens["cDAI"].accrueInterest({"from": lender})
+    env.notional.settleAccount(wrapper.address, {"from": lender})
+
+    assets = wrapper.previewRedeem(100e8)
+    txn = wrapper.redeem(100e8, accounts[0].address, lender.address, {'from': lender})
+    assert wrapper.balanceOf(lender.address) == 0
+    assert env.tokens['DAI'].balanceOf(accounts[0].address) > 100e18
+    assert env.tokens['DAI'].balanceOf(accounts[0].address) < 100.1e18

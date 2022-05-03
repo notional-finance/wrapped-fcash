@@ -16,11 +16,13 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     /** @dev See {IERC4262-totalAssets} */
     function totalAssets() public view override returns (uint256) {
         if (hasMatured()) {
-            // If the fCash has matured we use the cash balance instead
+            // If the fCash has matured we use the cash balance instead.
             uint16 currencyId = getCurrencyId();
+            // We cannot settle an account in a view method, so this may fail if the account has not been settled
+            // after maturity. This can be done by anyone so it should not be an issue
             (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
             int256 underlyingExternal = NotionalV2.convertCashBalanceToExternal(currencyId, cashBalance, true);
-            require(underlyingExternal > 0);
+            require(underlyingExternal > 0, "Must Settle");
             return uint256(underlyingExternal);
         } else {
             (/* */, int256 precision) = getUnderlyingToken();
@@ -45,9 +47,11 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         if (hasMatured()) {
             // If the fCash has matured we use the cash balance instead
             uint16 currencyId = getCurrencyId();
+            // We cannot settle an account in a view method, so this may fail if the account has not been settled
+            // after maturity. This can be done by anyone so it should not be an issue
             (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
             int256 underlyingExternal = NotionalV2.convertCashBalanceToExternal(currencyId, cashBalance, true);
-            require(underlyingExternal > 0);
+            require(underlyingExternal > 0, "Must Settle");
 
             // The withdraw calculation is:
             // shares * cashBalance / totalSupply = cashBalanceShare
@@ -186,13 +190,17 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         address receiver,
         address owner
     ) public override returns (uint256) {
-        uint256 assets = previewRedeem(shares);
+        // It is more accurate and gas efficient to check the balance of the
+        // receiver here than rely on the previewRedeem method.
+        uint256 balanceBefore = IERC20(asset()).balanceOf(receiver);
 
         if (msg.sender != owner) {
             _spendAllowance(owner, msg.sender, shares);
         }
         _redeemInternal(shares, receiver, owner);
 
+        uint256 balanceAfter = IERC20(asset()).balanceOf(receiver);
+        uint256 assets = balanceAfter - balanceBefore;
         emit Withdraw(msg.sender, receiver, owner, assets, shares);
         return assets;
     }
@@ -202,8 +210,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         address receiver,
         address owner
     ) private {
-        redeem(
-            shares,
+        bytes memory userData = abi.encode(
             RedeemOpts({
                 redeemToUnderlying: true,
                 transferfCash: false,
@@ -211,6 +218,9 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
                 maxImpliedRate: 0
             })
         );
+
+        // No operator data
+        _burn(owner, shares, userData, "");
     }
 
     function _safeNegInt88(uint256 x) private pure returns (int88) {
