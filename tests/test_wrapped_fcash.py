@@ -513,28 +513,28 @@ def test_lend_via_erc1155_action_underlying_token(wrapper, env, accounts):
 # ERC4626 tests
 def test_deposit_4626(wrapper, env, lender):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
 
+    # There is a little drift between these two calls
     preview = wrapper.previewDeposit(100e18)
-    wrapper.deposit(100e18, lender.address, {"from": lender})
+    txn = wrapper.deposit(100e18, lender.address, {"from": lender})
 
-    assert wrapper.balanceOf(lender.address) == preview
+    assert pytest.approx(wrapper.balanceOf(lender.address), abs=100) == preview
+    assert txn.events['Deposit']['shares'] == wrapper.balanceOf(lender.address)
 
 def test_deposit_receiver_4626(wrapper, env, lender, accounts):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
 
     preview = wrapper.previewDeposit(100e18)
-    wrapper.deposit(100e18, accounts[0].address, {"from": lender})
+    txn = wrapper.deposit(100e18, accounts[0].address, {"from": lender})
 
-    assert wrapper.balanceOf(accounts[0].address) == preview
+    assert pytest.approx(wrapper.balanceOf(accounts[0].address), abs=100) == preview
+    assert txn.events['Deposit']['shares'] == wrapper.balanceOf(accounts[0].address)
     assert wrapper.balanceOf(lender.address) == 0
 
 def test_deposit_matured_4626(wrapper, env, lender):
     chain.mine(1, timestamp=wrapper.getMaturity())
 
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
 
     with brownie.reverts("Matured"):
         wrapper.previewDeposit(100e18)
@@ -544,26 +544,24 @@ def test_deposit_matured_4626(wrapper, env, lender):
 
 def test_mint_4626(wrapper, env, lender):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
     daiBalanceBefore = env.tokens["DAI"].balanceOf(lender.address)
 
     assets = wrapper.previewMint(100e8)
     wrapper.mint(100e8, lender.address, {"from": lender})
     daiBalanceAfter = env.tokens["DAI"].balanceOf(lender.address)
 
-    assert pytest.approx(daiBalanceBefore - daiBalanceAfter, abs=1) == assets
+    assert pytest.approx(daiBalanceBefore - daiBalanceAfter, abs=1e11) == assets
     assert wrapper.balanceOf(lender.address) == 100e8
 
 def test_mint_receiver_4626(wrapper, env, lender, accounts):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
     daiBalanceBefore = env.tokens["DAI"].balanceOf(lender.address)
 
     assets = wrapper.previewMint(100e8)
     wrapper.mint(100e8, accounts[0].address, {"from": lender})
     daiBalanceAfter = env.tokens["DAI"].balanceOf(lender.address)
 
-    assert pytest.approx(daiBalanceBefore - daiBalanceAfter, abs=1) == assets
+    assert pytest.approx(daiBalanceBefore - daiBalanceAfter, abs=1e11) == assets
     assert wrapper.balanceOf(lender.address) == 0
     assert wrapper.balanceOf(accounts[0].address) == 100e8
 
@@ -576,7 +574,6 @@ def test_mint_deposit_matured_4626(wrapper, env, lender):
 
 def test_withdraw_4626(wrapper, env, lender, accounts):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
     wrapper.mint(100e8, lender.address, {"from": lender})
     balanceBefore = wrapper.balanceOf(lender.address)
     daiBalanceBefore = env.tokens["DAI"].balanceOf(lender.address)
@@ -586,22 +583,20 @@ def test_withdraw_4626(wrapper, env, lender, accounts):
     balanceAfter = wrapper.balanceOf(lender.address)
     daiBalanceAfter = env.tokens["DAI"].balanceOf(lender.address)
     assert balanceBefore - balanceAfter == shares
-    assert pytest.approx(daiBalanceAfter - daiBalanceBefore, rel=1e-9) == 50e18
+    assert pytest.approx(daiBalanceAfter - daiBalanceBefore, abs=1e11) == 50e18
 
 def test_withdraw_receiver_4626(wrapper, env, lender, accounts):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
     wrapper.mint(100e8, lender.address, {"from": lender})
     balanceBefore = wrapper.balanceOf(lender.address)
 
     shares = wrapper.previewWithdraw(50e18)
     wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': lender.address})
     assert wrapper.balanceOf(lender.address) == balanceBefore - shares
-    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), rel=1e-9) == 50e18
+    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), abs=1e11) == 50e18
 
 def test_withdraw_allowance_4626(wrapper, env, lender, accounts):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
     wrapper.mint(100e8, lender.address, {"from": lender})
     balanceBefore = wrapper.balanceOf(lender.address)
 
@@ -616,30 +611,29 @@ def test_withdraw_allowance_4626(wrapper, env, lender, accounts):
     wrapper.approve(accounts[0].address, 100e8, {'from': lender})
 
     shares = wrapper.previewWithdraw(50e18)
-    wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': accounts[0].address})
-    assert wrapper.balanceOf(lender.address) == balanceBefore - shares
-    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), rel=1e-9) == 50e18
+    txn = wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': accounts[0].address})
+    assert pytest.approx(shares, abs=100) == txn.events["Withdraw"]["shares"]
+    assert wrapper.balanceOf(lender.address) == balanceBefore - txn.events["Withdraw"]["shares"]
+    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), abs=1e11) == 50e18
 
 def test_withdraw_matured_4626(wrapper, env, lender, accounts):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
     wrapper.mint(100e8, lender.address, {"from": lender})
 
     chain.mine(1, timestamp=wrapper.getMaturity())
     balanceBefore = wrapper.balanceOf(lender.address)
 
-    env.tokens["cDAI"].accrueInterest({"from": lender})
     env.notional.settleAccount(wrapper.address, {"from": lender})
 
     shares = wrapper.previewWithdraw(50e18)
     txn = wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': lender})
-    assert wrapper.balanceOf(lender.address) == balanceBefore - shares
+    assert pytest.approx(shares, abs=100) == txn.events["Withdraw"]["shares"]
+    assert wrapper.balanceOf(lender.address) == balanceBefore - txn.events["Withdraw"]["shares"]
     assert env.tokens['DAI'].balanceOf(accounts[0].address) > 50e18
     assert env.tokens['DAI'].balanceOf(accounts[0].address) < 50.1e18
 
 def test_redeem_4626(wrapper, env, lender, accounts):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
     wrapper.mint(100e8, lender.address, {"from": lender})
     balanceBefore = wrapper.balanceOf(lender.address)
     daiBalanceBefore = env.tokens["DAI"].balanceOf(lender.address)
@@ -649,22 +643,20 @@ def test_redeem_4626(wrapper, env, lender, accounts):
     balanceAfter = wrapper.balanceOf(lender.address)
     daiBalanceAfter = env.tokens["DAI"].balanceOf(lender.address)
     assert balanceBefore - balanceAfter == 50e8
-    assert pytest.approx(daiBalanceAfter - daiBalanceBefore, rel=1e-9) == assets
+    assert pytest.approx(daiBalanceAfter - daiBalanceBefore, abs=1e11) == assets
 
 def test_redeem_receiver_4626(wrapper, env, accounts, lender):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
     wrapper.mint(100e8, lender.address, {"from": lender})
     balanceBefore = wrapper.balanceOf(lender.address)
 
     assets = wrapper.previewRedeem(100e8)
     wrapper.redeem(100e8, accounts[0].address, lender.address, {'from': lender.address})
     assert wrapper.balanceOf(lender.address) == 0
-    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), rel=1e-9) == assets
+    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), abs=1e11) == assets
 
 def test_redeem_allowance_4626(wrapper, env, accounts, lender):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
     wrapper.mint(100e8, lender.address, {"from": lender})
     balanceBefore = wrapper.balanceOf(lender.address)
 
@@ -681,17 +673,15 @@ def test_redeem_allowance_4626(wrapper, env, accounts, lender):
     assets = wrapper.previewRedeem(50e8)
     wrapper.redeem(50e8, accounts[0].address, lender.address, {'from': accounts[0].address})
     assert wrapper.balanceOf(lender.address) == balanceBefore - 50e8
-    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), rel=1e-9) == assets
+    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), abs=1e11) == assets
 
 def test_redeem_matured_4626(wrapper, env, accounts, lender):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
-    env.tokens["cDAI"].accrueInterest({"from": lender})
     wrapper.mint(100e8, lender.address, {"from": lender})
 
     chain.mine(1, timestamp=wrapper.getMaturity())
     balanceBefore = wrapper.balanceOf(lender.address)
 
-    env.tokens["cDAI"].accrueInterest({"from": lender})
     env.notional.settleAccount(wrapper.address, {"from": lender})
 
     assets = wrapper.previewRedeem(100e8)

@@ -18,7 +18,7 @@ networks:
       fork_block: 13986174
   kovan-fork:
     cmd_settings:
-      fork_block: 31398400
+      fork_block: 31456000
 
 reports:
   exclude_paths:
