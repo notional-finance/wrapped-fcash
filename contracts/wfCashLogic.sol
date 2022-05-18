@@ -3,14 +3,17 @@ pragma solidity 0.8.11;
 pragma experimental ABIEncoderV2;
 
 import "./wfCashBase.sol";
-import "./lib/AllowfCashReceiver.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /// @dev This implementation contract is deployed as an UpgradeableBeacon. Each BeaconProxy
 /// that uses this contract as an implementation will call initialize to set its own fCash id.
 /// That identifier will represent the fCash that this ERC20 wrapper can hold.
-abstract contract wfCashLogic is wfCashBase, AllowfCashReceiver, ReentrancyGuard {
+abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    // bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))
+    bytes4 internal constant ERC1155_ACCEPTED = 0xf23a6e61;
+    // bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))
+    bytes4 internal constant ERC1155_BATCH_ACCEPTED = 0xbc197c81;
 
     constructor(INotionalV2 _notional) wfCashBase(_notional) {}
 
@@ -83,30 +86,30 @@ abstract contract wfCashLogic is wfCashBase, AllowfCashReceiver, ReentrancyGuard
         uint256 _id,
         uint256 _value,
         bytes calldata _data
-    ) external override nonReentrant returns (bytes4) {
-        // Only accept erc1155 transfers from NotionalV2
-        require(msg.sender == address(NotionalV2), "Invalid caller");
-        // Only accept the fcash id that corresponds to the listed currency and maturity
+    ) external nonReentrant returns (bytes4) {
         uint256 fCashID = getfCashId();
-        require(_id == fCashID, "Invalid fCash asset");
-        // Protect against signed value underflows
-        require(int256(_value) > 0, "Invalid value");
+        // Only accept erc1155 transfers from NotionalV2
+        require(
+            msg.sender == address(NotionalV2) &&
+            // Only accept the fcash id that corresponds to the listed currency and maturity
+            _id == fCashID &&
+            // Protect against signed value underflows
+            int256(_value) > 0,
+            "Invalid"
+        );
 
         // Double check the account's position, these are not strictly necessary and add gas costs
         // but might be good safe guards
         AccountContext memory ac = NotionalV2.getAccountContext(address(this));
-        require(ac.hasDebt == 0x00, "Incurred debt");
-        PortfolioAsset[] memory assets = NotionalV2.getAccountPortfolio(
-            address(this)
-        );
-        require(assets.length == 1, "Invalid assets");
+        PortfolioAsset[] memory assets = NotionalV2.getAccountPortfolio(address(this));
         require(
+            ac.hasDebt == 0x00 &&
+            assets.length == 1 &&
             EncodeDecode.encodeERC1155Id(
                 assets[0].currencyId,
                 assets[0].maturity,
                 assets[0].assetType
-            ) == fCashID,
-            "Invalid portfolio asset"
+            ) == fCashID
         );
 
         // Update per account fCash balance, calldata from the ERC1155 call is
@@ -122,17 +125,6 @@ abstract contract wfCashLogic is wfCashBase, AllowfCashReceiver, ReentrancyGuard
 
         // This will allow the fCash to be accepted
         return ERC1155_ACCEPTED;
-    }
-
-    /// @dev Do not accept batches of fCash
-    function onERC1155BatchReceived(
-        address, /* _operator */
-        address, /* _from */
-        uint256[] calldata, /* _ids */
-        uint256[] calldata, /* _values */
-        bytes calldata /* _data */
-    ) external pure override returns (bytes4) {
-        return 0;
     }
 
     /***** Redeem (Burn) Methods *****/
