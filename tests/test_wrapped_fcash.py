@@ -133,12 +133,12 @@ def test_cannot_deploy_invalid_maturity(factory, env):
 
 # Test Minting fCash
 def test_only_accepts_notional_v2(wrapper, beacon, lender, env):
-    impl = wfCashERC4626.deploy(env.deployer.address, {"from": env.deployer})
+    impl = wfCashERC4626.deploy(env.deployer.address, env.tokens["WETH"].address, {"from": env.deployer})
 
     # Change the address of notional on the beacon
     beacon.upgradeTo(impl.address)
 
-    with brownie.reverts("Invalid caller"):
+    with brownie.reverts("Invalid"):
         env.notional.safeTransferFrom(
             lender.address,
             wrapper.address,
@@ -166,7 +166,7 @@ def test_cannot_transfer_invalid_fcash(lender, factory, env):
         )
 
 def test_cannot_transfer_batch_fcash(wrapper, lender, env):
-    with brownie.reverts("Not accepted"):
+    with brownie.reverts():
         env.notional.safeBatchTransferFrom(
             lender.address,
             wrapper.address,
@@ -715,3 +715,31 @@ def test_mint_and_redeem_via_weth(factory, env, accounts, lender):
     assert wrapper.balanceOf(account.address) == 0
     assert env.tokens['WETH'].balanceOf(accounts[2].address) > 0.98e18
     assert env.tokens['WETH'].balanceOf(accounts[2].address) < 1e18
+
+def test_mint_redeem_eth_4626(factory, env, lender, accounts):
+    markets = env.notional.getActiveMarkets(1)
+    txn = factory.deployWrapper(1, markets[0][1])
+    wrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
+    wethABI = WrappedFcashProject._build.get("WETH9")["abi"]
+    weth = Contract.from_abi("WETH", env.tokens["WETH"], wethABI)
+    
+    account = accounts[1]
+    weth.deposit({'from': account, 'value': 1e18})
+    
+    env.tokens['WETH'].approve(wrapper.address, 2**255-1, {"from": account})
+    wrapper.mint(1e8, account.address, {"from": account})
+    assert wrapper.balanceOf(account.address) == 1e8
+    assert env.tokens["WETH"].balanceOf(account) < 0.1e18
+
+    wrapper.redeem(1e8, account.address, account.address, {"from": account})
+    assert env.tokens["WETH"].balanceOf(account) > 0.95e18
+    assert wrapper.balanceOf(account.address) == 0
+
+    wrapper.deposit(0.95e18, account.address, {"from": account})
+    assert wrapper.balanceOf(account.address) > 0.95e8
+    assert env.tokens["WETH"].balanceOf(account) < 0.05e18
+
+    chain.mine(1, timestamp=wrapper.getMaturity())
+    env.notional.settleAccount(wrapper.address, {"from": account})
+    wrapper.redeem(wrapper.balanceOf(account), account.address, account.address, {"from": account})
+    assert env.tokens["WETH"].balanceOf(account) > 0.95e18
