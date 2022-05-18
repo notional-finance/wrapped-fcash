@@ -55,26 +55,50 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
         bool useUnderlying
     ) internal nonReentrant {
         require(!hasMatured(), "fCash matured");
-        (IERC20 token, /* bool isETH */) = getToken(useUnderlying);
-        uint256 balanceBefore = token.balanceOf(address(this));
+        (IERC20 token, bool isETH) = getToken(useUnderlying);
+        uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
 
-        // Transfers tokens in for lending, Notional will transfer from this contract.
-        token.safeTransferFrom(msg.sender, address(this), depositAmountExternal);
+        // If dealing in ETH, we use WETH in the wrapper instead of ETH. NotionalV2 uses
+        // ETH natively but due to pull payment requirements for batchLend, it does not support
+        // ETH. batchLend only supports ERC20 tokens like cETH or aETH. Since the wrapper is a compatibility
+        // layer, it will support WETH so integrators can deal solely in ERC20 tokens. Instead of using
+        // "batchLend" we will use "batchBalanceActionWithTrades". The difference is that "batchLend"
+        // is more gas efficient (does not require and additional redeem call to asset tokens). If using cETH
+        // then everything will proceed via batchLend.
+        if (isETH) {
+            IERC20((address(WETH))).safeTransferFrom(msg.sender, address(this), depositAmountExternal);
+            WETH.withdraw(depositAmountExternal);
 
-        // Executes a lending action on Notional
-        BatchLend[] memory action = EncodeDecode.encodeLendTrade(
-            getCurrencyId(),
-            getMarketIndex(),
-            fCashAmount,
-            minImpliedRate,
-            useUnderlying
-        );
-        NotionalV2.batchLend(address(this), action);
+            BalanceActionWithTrades[] memory action = EncodeDecode.encodeLendETHTrade(
+                getCurrencyId(),
+                getMarketIndex(),
+                depositAmountExternal,
+                fCashAmount,
+                minImpliedRate
+            );
+            // Notional will return any residual ETH as the native token. When we _sendTokensToReceiver those
+            // native ETH tokens will be wrapped back to WETH.
+            NotionalV2.batchBalanceAndTradeAction{value: depositAmountExternal}(address(this), action);
+        } else {
+            // Transfers tokens in for lending, Notional will transfer from this contract.
+            token.safeTransferFrom(msg.sender, address(this), depositAmountExternal);
 
-        // Mints ERC20 tokens for the receiver
+            // Executes a lending action on Notional
+            BatchLend[] memory action = EncodeDecode.encodeLendTrade(
+                getCurrencyId(),
+                getMarketIndex(),
+                fCashAmount,
+                minImpliedRate,
+                useUnderlying
+            );
+            NotionalV2.batchLend(address(this), action);
+        }
+
+        // Mints ERC20 tokens for the receiver, the false flag denotes that we will not do an
+        // operatorAck
         _mint(receiver, fCashAmount, "", "", false);
 
-        _sendTokensToReceiver(token, msg.sender, false, balanceBefore);
+        _sendTokensToReceiver(token, msg.sender, isETH, balanceBefore);
     }
 
     /// @notice This hook will be called every time this contract receives fCash, will validate that

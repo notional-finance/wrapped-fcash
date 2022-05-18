@@ -3,6 +3,7 @@ import brownie
 import eth_abi
 from tests.helpers import get_balance_trade_action, get_lend_action
 from brownie import Contract, wfCashERC4626, network, nUpgradeableBeacon
+from brownie.project import WrappedFcashProject
 from brownie.convert.datatypes import Wei
 from brownie.convert import to_bytes
 from brownie.network import Chain
@@ -26,7 +27,7 @@ def env():
 
 @pytest.fixture() 
 def beacon(wfCashERC4626, nUpgradeableBeacon, env):
-    impl = wfCashERC4626.deploy(env.notional.address, {"from": env.deployer})
+    impl = wfCashERC4626.deploy(env.notional.address, env.tokens['WETH'], {"from": env.deployer})
     return nUpgradeableBeacon.deploy(impl.address, {"from": env.deployer})
 
 @pytest.fixture() 
@@ -689,3 +690,28 @@ def test_redeem_matured_4626(wrapper, env, accounts, lender):
     assert wrapper.balanceOf(lender.address) == 0
     assert env.tokens['DAI'].balanceOf(accounts[0].address) > 100e18
     assert env.tokens['DAI'].balanceOf(accounts[0].address) < 100.1e18
+
+def test_mint_and_redeem_via_weth(factory, env, accounts, lender):
+    markets = env.notional.getActiveMarkets(1)
+    txn = factory.deployWrapper(1, markets[0][1])
+    wrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
+    wethABI = WrappedFcashProject._build.get("WETH9")["abi"]
+    weth = Contract.from_abi("WETH", env.tokens["WETH"], wethABI)
+    
+    account = accounts[1]
+    weth.deposit({'from': account, 'value': 1e18})
+
+    env.tokens['WETH'].approve(wrapper.address, 2**255-1, {"from": account})
+    balanceBefore = env.tokens["WETH"].balanceOf(account)
+    wrapper.mintViaUnderlying(1e18, 1e8, account.address, 0, {"from": account})
+    balanceAfter = env.tokens["WETH"].balanceOf(account)
+
+    assert wrapper.balanceOf(account) == 1e8
+    # There is some residual WETH left
+    assert 0.98e18 <= balanceBefore - balanceAfter and balanceBefore - balanceAfter <= 1e18
+
+    # Redeem to underlying mints WETH
+    wrapper.redeemToUnderlying(1e8, accounts[2].address, 0, {'from': account})
+    assert wrapper.balanceOf(account.address) == 0
+    assert env.tokens['WETH'].balanceOf(accounts[2].address) > 0.98e18
+    assert env.tokens['WETH'].balanceOf(accounts[2].address) < 1e18

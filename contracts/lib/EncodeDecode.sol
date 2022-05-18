@@ -58,6 +58,28 @@ library EncodeDecode {
         );
     }
 
+    function encodeLendETHTrade(
+        uint16 currencyId,
+        uint8 marketIndex,
+        uint256 depositAmountExternal,
+        uint88 fCashAmount,
+        uint32 minImpliedRate
+    ) internal pure returns (BalanceActionWithTrades[] memory action) {
+        action = new BalanceActionWithTrades[](1);
+        action[0].actionType = DepositActionType.DepositUnderlying;
+        action[0].currencyId = currencyId;
+        action[0].depositActionAmount = depositAmountExternal;
+        action[0].withdrawEntireCashBalance = true;
+        action[0].redeemToUnderlying = true;
+        action[0].trades = new bytes32[](1);
+        action[0].trades[0] = bytes32(
+            (uint256(uint8(TradeActionType.Lend)) << 248) |
+            (uint256(marketIndex) << 240) |
+            (uint256(fCashAmount) << 152) |
+            (uint256(minImpliedRate) << 120)
+        );
+    }
+
     function encodeBorrowTrade(
         uint16 currencyId,
         uint8 marketIndex,
