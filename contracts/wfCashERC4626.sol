@@ -5,12 +5,12 @@ import "./wfCashLogic.sol";
 import "../interfaces/IERC4626.sol";
 
 contract wfCashERC4626 is IERC4626, wfCashLogic {
-    constructor(INotionalV2 _notional) wfCashLogic(_notional) {}
+    constructor(INotionalV2 _notional, WETH9 _weth) wfCashLogic(_notional, _weth) {}
 
     /** @dev See {IERC4262-asset} */
     function asset() public view override returns (address) {
-        (IERC20 underlyingToken, /* */) = getUnderlyingToken();
-        return address(underlyingToken);
+        (IERC20 underlyingToken, bool isETH) = getToken(true);
+        return isETH ? address(WETH) : address(underlyingToken);
     }
 
     function _getMaturedUnderlyingExternal() private view returns (uint256) {

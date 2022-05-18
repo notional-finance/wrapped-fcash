@@ -6,6 +6,7 @@ import "./lib/DateTime.sol";
 import "./lib/EncodeDecode.sol";
 import "../interfaces/notional/INotionalV2.sol";
 import "../interfaces/notional/IWrappedfCash.sol";
+import "../interfaces/WETH9.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -17,6 +18,7 @@ abstract contract wfCashBase is ERC777Upgradeable, IWrappedfCash {
 
     /// @notice address to the NotionalV2 system
     INotionalV2 public immutable NotionalV2;
+    WETH9 public immutable WETH;
 
     /// @dev Storage slot for fCash id. Read only and set on initialization
     uint256 private _fCashId;
@@ -24,8 +26,9 @@ abstract contract wfCashBase is ERC777Upgradeable, IWrappedfCash {
     /// @notice Constructor is called only on deployment to set the Notional address, rest of state
     /// is initialized on the proxy.
     /// @dev Ensure initializer modifier is on the constructor to prevent an attack on UUPSUpgradeable contracts
-    constructor(INotionalV2 _notional) initializer {
+    constructor(INotionalV2 _notional, WETH9 _weth) initializer {
         NotionalV2 = _notional;
+        WETH = _weth;
     }
 
     /// @notice Initializes a proxy for a specific fCash asset

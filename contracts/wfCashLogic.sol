@@ -15,7 +15,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
     // bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))
     bytes4 internal constant ERC1155_BATCH_ACCEPTED = 0xbc197c81;
 
-    constructor(INotionalV2 _notional) wfCashBase(_notional) {}
+    constructor(INotionalV2 _notional, WETH9 _weth) wfCashBase(_notional, _weth) {}
 
     /***** Mint Methods *****/
 
@@ -281,8 +281,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
         tokensTransferred = balanceAfter - balanceBefore;
 
         if (isETH) {
-            (bool success, /* */) = payable(receiver).call{value: tokensTransferred}("");
-            require(success);
+            WETH.deposit{value: tokensTransferred}();
+            IERC20(address(WETH)).safeTransfer(receiver, tokensTransferred);
         } else {
             token.safeTransfer(receiver, tokensTransferred);
         }
