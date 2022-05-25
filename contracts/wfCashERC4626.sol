@@ -123,14 +123,12 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4262-previewDeposit} */
     function previewDeposit(uint256 assets) public view override returns (uint256) {
-        require(!hasMatured(), "Matured");
-        return convertToShares(assets);
+        return hasMatured() ? 0 : convertToShares(assets);
     }
 
     /** @dev See {IERC4262-previewMint} */
     function previewMint(uint256 shares) public view override returns (uint256) {
-        require(!hasMatured(), "Matured");
-        return convertToAssets(shares);
+        return hasMatured() ? 0 : convertToAssets(shares);
     }
 
     /** @dev See {IERC4262-previewWithdraw} */
@@ -170,9 +168,8 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4262-deposit} */
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
-        require(assets <= maxDeposit(receiver), "Max Deposit");
         uint256 shares = previewDeposit(assets);
-
+        // Will revert if matured
         _mintInternal(assets, _safeUint88(shares), receiver, 0, true);
         emit Deposit(msg.sender, receiver, assets, shares);
         return shares;
@@ -181,7 +178,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     /** @dev See {IERC4262-mint} */
     function mint(uint256 shares, address receiver) public override returns (uint256) {
         uint256 assets = previewMint(shares);
-
+        // Will revert if matured
         _mintInternal(assets, _safeUint88(shares), receiver, 0, true);
         emit Deposit(msg.sender, receiver, assets, shares);
         return assets;

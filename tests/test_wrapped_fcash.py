@@ -537,10 +537,9 @@ def test_deposit_matured_4626(wrapper, env, lender):
 
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
 
-    with brownie.reverts("Matured"):
-        wrapper.previewDeposit(100e18)
+    assert wrapper.previewDeposit(100e18) == 0
 
-    with brownie.reverts("Max Deposit"):
+    with brownie.reverts("fCash matured"):
         wrapper.deposit(100e18, lender.address, {"from": lender})
 
 def test_mint_4626(wrapper, env, lender):
@@ -569,7 +568,7 @@ def test_mint_receiver_4626(wrapper, env, lender, accounts):
 def test_mint_deposit_matured_4626(wrapper, env, lender):
     chain.mine(1, timestamp=wrapper.getMaturity())
 
-    with brownie.reverts("Matured"):
+    with brownie.reverts("fCash matured"):
         wrapper.mint(100e8, lender.address, {"from": lender})
         wrapper.deposit(100e18, lender.address, {"from": lender})
 
@@ -674,7 +673,7 @@ def test_redeem_allowance_4626(wrapper, env, accounts, lender):
     assets = wrapper.previewRedeem(50e8)
     wrapper.redeem(50e8, accounts[0].address, lender.address, {'from': accounts[0].address})
     assert wrapper.balanceOf(lender.address) == balanceBefore - 50e8
-    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), abs=1e11) == assets
+    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), abs=1.1e11) == assets
 
 def test_redeem_matured_4626(wrapper, env, accounts, lender):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
