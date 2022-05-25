@@ -16,7 +16,7 @@ One canonical wfCash contract can be deployed permissionlessly for every currenc
 
 ## Lending
 
-Lending fCash can be done by calling `mint` or `deposit`. ERC4626 is provided as a compatibility layer but due to the computation required it is not the most gas efficient implementation. Using the non-ERC4626 `mint` function is significantly more gas efficient. (See table below).
+Lending fCash can be done by calling `mintViaAsset`, `mintViaUnderlying`, `mint` or `deposit`. ERC4626 is provided as a compatibility layer but due to the computation required it is not the most gas efficient implementation. Using the non-ERC4626 `mintViaAsset` or `mintViaUnderlying` function is significantly more gas efficient. (See table below).
 
 Creating wfCash tokens can also be done by using an ERC1155 `safeTransferFrom` to the corresponding wfCash contract from the main Notional contract. This allows accounts to seamlessly enter and exit wfCash positions from Notional ERC1155.
 
@@ -34,7 +34,7 @@ Before or after maturity, redeeming wfCash can be done by calling `redeem`, `red
 
 Gas costs are estimated in `scripts/gas_costs.py` and the current output can be seen in `gas_costs.json`. ERC4626 adds significant gas costs and also does not allow the user to specify slippage thresholds, however, it does provide a very simple access point into wrapped fCash.
 
-Using asset tokens is the most gas efficient (and probably capital efficient) way to access wrapped fCash. Using ERC1155 transfer and batchLend calls saves 1 or 2 ERC20 token transfers and therefore will save about 100k gas (about 20%).
+Using asset tokens is the most gas efficient and capital efficient way to access wrapped fCash. Using ERC1155 transfer and batchLend calls saves 1 or 2 ERC20 token transfers and therefore will save about 100k gas (about 20%).
 
 ## Code Stats
 

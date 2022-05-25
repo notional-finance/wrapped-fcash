@@ -742,3 +742,16 @@ def test_mint_redeem_eth_4626(factory, env, lender, accounts):
     env.notional.settleAccount(wrapper.address, {"from": account})
     wrapper.redeem(wrapper.balanceOf(account), account.address, account.address, {"from": account})
     assert env.tokens["WETH"].balanceOf(account) > 0.95e18
+
+def test_convert_to_and_from_shares_zero_supply(env, wrapper):
+    assert wrapper.totalAssets() == 0
+    assert 100e8 < wrapper.convertToShares(100e18) and wrapper.convertToShares(100e18) < 105e8
+    assert 95e18 < wrapper.convertToAssets(100e8) and wrapper.convertToAssets(100e8) < 100e18
+
+
+def test_convert_to_and_from_shares(env, wrapper, lender):
+    env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
+    wrapper.mint(100e8, lender.address, {"from": lender})
+    assert 95e18 < wrapper.totalAssets() and wrapper.totalAssets() < 100e18
+    assert 100e8 < wrapper.convertToShares(100e18) and wrapper.convertToShares(100e18) < 105e8
+    assert 95e18 < wrapper.convertToAssets(100e8) and wrapper.convertToAssets(100e8) < 100e18
