@@ -14,7 +14,7 @@ def getEnv():
         return getEnvironment('kovan')
 
 def getFactory(env):
-    impl = wfCashERC4626.deploy(env.notional.address, {"from": env.deployer})
+    impl = wfCashERC4626.deploy(env.notional.address, env.tokens['WETH'], {"from": env.deployer})
     beacon = nUpgradeableBeacon.deploy(impl.address, {"from": env.deployer})
     return WrappedfCashFactory.deploy(beacon.address, {"from": env.deployer})
 
@@ -43,9 +43,9 @@ def main():
     env.tokens["cDAI"].approve(wrapper.address, 2 ** 256 - 1, {'from': lender})
 
     # Mint (via Underlying)
-    gas["MintViaUnderlyingToken"] = runAndLogGas(wrapper.mint, [ 100e18, 100e8, lender.address, 0.01e9, True ], lender)
+    gas["MintViaUnderlyingToken"] = runAndLogGas(wrapper.mintViaUnderlying, [ 100e18, 100e8, lender.address, 0.01e9 ], lender)
     # Mint (via Asset)
-    gas["MintViaAssetToken"] = runAndLogGas(wrapper.mint, [ 5000e8, 100e8, lender.address, 0.01e9, False ], lender)
+    gas["MintViaAssetToken"] = runAndLogGas(wrapper.mintViaAsset, [ 5000e8, 100e8, lender.address, 0.01e9], lender)
     gas["MintViaERC4626"] = runAndLogGas(wrapper.mint, [  100e8, lender.address ], lender)
     gas["DepositViaERC4626"] = runAndLogGas(wrapper.deposit, [ 100e18, lender.address ], lender)
 
