@@ -40,13 +40,12 @@ Using asset tokens is the most gas efficient and capital efficient way to access
 
 | Module    | File                    | Code | Comments | Total Lines | Complexity / Line |
 | :-------- | :---------------------- | ---: | -------: | ----------: | ----------------: |
-| Contracts | wfCashBase.sol          |   93 |       30 |         147 |              12.9 |
-| Contracts | wfCashERC4626.sol       |  155 |       34 |         221 |               6.5 |
-| Contracts | wfCashLogic.sol         |  202 |       54 |         291 |               7.9 |
-| Lib       | AllowfCashReceiver.sol  |   19 |        7 |          29 |               0.0 |
+| Contracts | wfCashBase.sol          |   96 |       30 |         150 |              12.5 |
+| Contracts | wfCashERC4626.sol       |  180 |       33 |         247 |               8.9 |
+| Contracts | wfCashLogic.sol         |  214 |       69 |         319 |               8.4 |
 | Lib       | Constants.sol           |   26 |       11 |          46 |               0.0 |
 | Lib       | DateTime.sol            |   93 |       28 |         140 |              34.4 |
-| Lib       | EncodeDecode.sol        |   71 |        3 |          81 |               0.0 |
+| Lib       | EncodeDecode.sol        |   92 |        3 |         103 |               0.0 |
 | Lib       | Types.sol               |   91 |       69 |         172 |               0.0 |
 | Proxy     | WrappedfCashFactory.sol |   28 |        5 |          42 |               7.1 |
 | Proxy     | nBeaconProxy.sol        |    7 |        2 |          12 |               0.0 |
