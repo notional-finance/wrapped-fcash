@@ -52,8 +52,9 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     function convertToShares(uint256 assets) public view override returns (uint256 shares) {
         uint256 supply = totalSupply();
         if (supply == 0) {
-            // Catch the edge case where totalAssets is zero and returns an incorrect result
-            return previewDeposit(assets);
+            // Scales assets by the value of a single unit of fCash
+            uint256 unitfCashValue = _getPresentValue(uint256(Constants.INTERNAL_TOKEN_PRECISION));
+            return (assets * uint256(Constants.INTERNAL_TOKEN_PRECISION)) / unitfCashValue;
         }
 
         return (assets * totalSupply()) / totalAssets();
@@ -64,7 +65,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         uint256 supply = totalSupply();
         if (supply == 0) {
             // Catch the edge case where totalSupply causes a divide by zero error
-            return previewMint(shares);
+            return _getPresentValue(shares);
         }
 
         return (shares * totalAssets()) / supply;
