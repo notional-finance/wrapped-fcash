@@ -7,7 +7,7 @@ import "../interfaces/IERC4626.sol";
 contract wfCashERC4626 is IERC4626, wfCashLogic {
     constructor(INotionalV2 _notional, WETH9 _weth) wfCashLogic(_notional, _weth) {}
 
-    /** @dev See {IERC4262-asset} */
+    /** @dev See {IERC4626-asset} */
     function asset() public view override returns (address) {
         (IERC20 underlyingToken, bool isETH) = getToken(true);
         return isETH ? address(WETH) : address(underlyingToken);
@@ -43,12 +43,12 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         return uint256(pvExternal);
     }
 
-    /** @dev See {IERC4262-totalAssets} */
+    /** @dev See {IERC4626-totalAssets} */
     function totalAssets() public view override returns (uint256) {
         return hasMatured() ?  _getMaturedValue() : _getPresentValue(totalSupply());
     }
 
-    /** @dev See {IERC4262-convertToShares} */
+    /** @dev See {IERC4626-convertToShares} */
     function convertToShares(uint256 assets) public view override returns (uint256 shares) {
         uint256 supply = totalSupply();
         if (supply == 0) {
@@ -59,7 +59,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         return (assets * totalSupply()) / totalAssets();
     }
 
-    /** @dev See {IERC4262-convertToAssets} */
+    /** @dev See {IERC4626-convertToAssets} */
     function convertToAssets(uint256 shares) public view override returns (uint256 assets) {
         uint256 supply = totalSupply();
         if (supply == 0) {
@@ -70,27 +70,27 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         return (shares * totalAssets()) / supply;
     }
 
-    /** @dev See {IERC4262-maxDeposit} */
+    /** @dev See {IERC4626-maxDeposit} */
     function maxDeposit(address) public view override returns (uint256) {
         return hasMatured() ? 0 : type(uint256).max;
     }
 
-    /** @dev See {IERC4262-maxMint} */
+    /** @dev See {IERC4626-maxMint} */
     function maxMint(address) public view override returns (uint256) {
         return hasMatured() ? 0 : type(uint88).max;
     }
 
-    /** @dev See {IERC4262-maxWithdraw} */
+    /** @dev See {IERC4626-maxWithdraw} */
     function maxWithdraw(address owner) public view override returns (uint256) {
         return previewWithdraw(balanceOf(owner));
     }
 
-    /** @dev See {IERC4262-maxRedeem} */
+    /** @dev See {IERC4626-maxRedeem} */
     function maxRedeem(address owner) public view override returns (uint256) {
         return balanceOf(owner);
     }
 
-    /** @dev See {IERC4262-previewDeposit} */
+    /** @dev See {IERC4626-previewDeposit} */
     function previewDeposit(uint256 assets) public view override returns (uint256) {
         if (hasMatured()) {
             return 0;
@@ -110,7 +110,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         }
     }
 
-    /** @dev See {IERC4262-previewMint} */
+    /** @dev See {IERC4626-previewMint} */
     function previewMint(uint256 shares) public view override returns (uint256) {
         if (hasMatured()) {
             return 0;
@@ -129,7 +129,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         }
     }
 
-    /** @dev See {IERC4262-previewWithdraw} */
+    /** @dev See {IERC4626-previewWithdraw} */
     function previewWithdraw(uint256 assets) public view override returns (uint256 shares) {
         if (hasMatured()) {
             shares = convertToShares(assets);
@@ -147,7 +147,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         }
     }
 
-    /** @dev See {IERC4262-previewRedeem} */
+    /** @dev See {IERC4626-previewRedeem} */
     function previewRedeem(uint256 shares) public view override returns (uint256 assets) {
         if (hasMatured()) {
             assets = convertToAssets(shares);
@@ -164,7 +164,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         }
     }
 
-    /** @dev See {IERC4262-deposit} */
+    /** @dev See {IERC4626-deposit} */
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
         uint256 shares = previewDeposit(assets);
         // Will revert if matured
@@ -173,7 +173,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         return shares;
     }
 
-    /** @dev See {IERC4262-mint} */
+    /** @dev See {IERC4626-mint} */
     function mint(uint256 shares, address receiver) public override returns (uint256) {
         uint256 assets = previewMint(shares);
         // Will revert if matured
@@ -182,7 +182,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         return assets;
     }
 
-    /** @dev See {IERC4262-withdraw} */
+    /** @dev See {IERC4626-withdraw} */
     function withdraw(
         uint256 assets,
         address receiver,
@@ -200,7 +200,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         return shares;
     }
 
-    /** @dev See {IERC4262-redeem} */
+    /** @dev See {IERC4626-redeem} */
     function redeem(
         uint256 shares,
         address receiver,
