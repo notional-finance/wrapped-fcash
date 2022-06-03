@@ -21,7 +21,13 @@ def run_around_tests():
 def env():
     name = network.show_active()
     if name == 'mainnet-fork':
-        return getEnvironment('mainnet')
+        environment = getEnvironment('mainnet')
+        environment.notional.upgradeTo('0x16eD130F7A6dcAc7e3B0617A7bafa4b470189962', {'from': environment.owner})
+        environment.notional.updateAssetRate(1, "0xE329E81800219Aefeef79D74DB35f8877fE1abdE", {"from": environment.owner})
+        environment.notional.updateAssetRate(2, "0x719993E82974f5b5eA0c5ebA25c260CD5AF78E00", {"from": environment.owner})
+        environment.notional.updateAssetRate(3, "0x7b0cc121ABd20ACd77482b5aa95126db2e597987", {"from": environment.owner})
+        environment.notional.updateAssetRate(4, "0x39D9590721331B13C8e9A42941a2B961B513E69d", {"from": environment.owner})
+        return environment
     elif name == 'kovan-fork':
         return getEnvironment('kovan')
 
@@ -231,7 +237,6 @@ def test_transfer_fcash(wrapper, lender, env):
     assert wrapper.balanceOf(lender.address) == 50_000e8
     assert env.notional.balanceOf(lender.address, wrapper.getfCashId()) == 50_000e8
 
-@pytest.mark.skip
 def test_transfer_fcash_contract(wrapper, lender_contract, env):
     env.notional.safeTransferFrom(
         lender_contract.address,
@@ -399,7 +404,7 @@ def test_mint_and_redeem_fusdc_via_underlying(factory, env):
     balanceAfter = env.tokens["USDC"].balanceOf(env.whales["USDC"].address)
     balanceChange = balanceAfter - balanceBefore 
 
-    assert 9700e6 <= balanceChange and balanceChange <= 9900e6
+    assert 9700e6 <= balanceChange and balanceChange <= 9990e6
     portfolio = env.notional.getAccount(wrapper.address)[2]
     assert len(portfolio) == 0
     assert wrapper.balanceOf(env.whales["USDC"].address) == 0
@@ -582,7 +587,7 @@ def test_withdraw_4626(wrapper, env, lender, accounts):
     wrapper.withdraw(50e18, lender.address, lender.address, {'from': lender.address})
     balanceAfter = wrapper.balanceOf(lender.address)
     daiBalanceAfter = env.tokens["DAI"].balanceOf(lender.address)
-    assert balanceBefore - balanceAfter == shares
+    assert pytest.approx(balanceBefore - balanceAfter, rel=1e-6) == shares
     assert pytest.approx(daiBalanceAfter - daiBalanceBefore, abs=1e11) == 50e18
 
 def test_withdraw_receiver_4626(wrapper, env, lender, accounts):
@@ -592,7 +597,7 @@ def test_withdraw_receiver_4626(wrapper, env, lender, accounts):
 
     shares = wrapper.previewWithdraw(50e18)
     wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': lender.address})
-    assert wrapper.balanceOf(lender.address) == balanceBefore - shares
+    assert pytest.approx(balanceBefore - shares, rel=1e-6) == wrapper.balanceOf(lender.address)
     assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), abs=1e11) == 50e18
 
 def test_withdraw_allowance_4626(wrapper, env, lender, accounts):
@@ -620,13 +625,13 @@ def test_withdraw_matured_4626(wrapper, env, lender, accounts):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
     wrapper.mint(100e8, lender.address, {"from": lender})
 
-    chain.mine(1, timestamp=wrapper.getMaturity())
+    chain.mine(1, timestamp=wrapper.getMaturity() + 86400)
     balanceBefore = wrapper.balanceOf(lender.address)
 
     env.notional.settleAccount(wrapper.address, {"from": lender})
 
-    shares = wrapper.previewWithdraw(50e18)
-    txn = wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': lender})
+    shares = wrapper.previewWithdraw(50.000000010e18)
+    txn = wrapper.withdraw(50.000000010e18, accounts[0].address, lender.address, {'from': lender})
     assert pytest.approx(shares, abs=100) == txn.events["Withdraw"]["shares"]
     assert wrapper.balanceOf(lender.address) == balanceBefore - txn.events["Withdraw"]["shares"]
     assert env.tokens['DAI'].balanceOf(accounts[0].address) > 50e18

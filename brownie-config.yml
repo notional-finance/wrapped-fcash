@@ -13,9 +13,9 @@ networks:
     hardhat-fork:
       cmd_settings:
         fork_block: 13986174
-  hardhat-fork:
+  mainnet-fork:
     cmd_settings:
-      fork_block: 13986174
+      fork_block: 14891500
   kovan-fork:
     cmd_settings:
       fork_block: 31456000
