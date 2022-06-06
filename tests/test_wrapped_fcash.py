@@ -23,9 +23,9 @@ def env():
     if name == 'mainnet-fork':
         environment = getEnvironment('mainnet')
         environment.notional.upgradeTo('0x16eD130F7A6dcAc7e3B0617A7bafa4b470189962', {'from': environment.owner})
-        environment.notional.updateAssetRate(1, "0xE329E81800219Aefeef79D74DB35f8877fE1abdE", {"from": environment.owner})
+        environment.notional.updateAssetRate(1, "0x8E3D447eBE244db6D28E2303bCa86Ef3033CFAd6", {"from": environment.owner})
         environment.notional.updateAssetRate(2, "0x719993E82974f5b5eA0c5ebA25c260CD5AF78E00", {"from": environment.owner})
-        environment.notional.updateAssetRate(3, "0x7b0cc121ABd20ACd77482b5aa95126db2e597987", {"from": environment.owner})
+        environment.notional.updateAssetRate(3, "0x612741825ACedC6F88D8709319fe65bCB015C693", {"from": environment.owner})
         environment.notional.updateAssetRate(4, "0x39D9590721331B13C8e9A42941a2B961B513E69d", {"from": environment.owner})
         return environment
     elif name == 'kovan-fork':
