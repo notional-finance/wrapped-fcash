@@ -3,13 +3,23 @@ from brownie import wfCashERC4626, nUpgradeableBeacon, WrappedfCashFactory, netw
 
 notionalAddress = {
     "kovan": "0x0EAE7BAdEF8f95De91fDDb74a89A786cF891Eb0e",
-    "kovan-fork": "0x0EAE7BAdEF8f95De91fDDb74a89A786cF891Eb0e"
+    "kovan-fork": "0x0EAE7BAdEF8f95De91fDDb74a89A786cF891Eb0e",
+    "goerli": "0xD8229B55bD73c61D840d339491219ec6Fa667B0a"
+}
+
+wethAddress = {
+    "kovan": "0xd0a1e359811322d97991e03f863a0c30c2cf029c",
+    "goerli": "0x04B9c40dF01bdc99dd2c31Ae4B232f20F4BBaC5B"
 }
 
 def main():
-    deployer = accounts.load("KOVAN_DEPLOYER")
+    networkName = network.show_active()
+    if networkName == "goerli-fork":
+        networkName = "goerli"
+    deployer = accounts.load("{}_DEPLOYER".format(networkName.upper()))
 
-    impl = wfCashERC4626.deploy(notionalAddress[network.show_active()], {"from": deployer}, publish_source=True)
+    impl = wfCashERC4626.deploy(notionalAddress[networkName], wethAddress[networkName],
+        {"from": deployer}, publish_source=True)
     beacon = nUpgradeableBeacon.deploy(impl.address, {"from": deployer}, publish_source=True)
     factory = WrappedfCashFactory.deploy(beacon.address, {"from": deployer}, publish_source=True)
 
