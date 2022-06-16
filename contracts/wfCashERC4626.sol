@@ -227,7 +227,9 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         address receiver,
         address owner
     ) private {
-        bytes memory userData = abi.encode(
+        _burnInternal(
+            owner,
+            shares,
             RedeemOpts({
                 redeemToUnderlying: true,
                 transferfCash: false,
@@ -235,9 +237,6 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
                 maxImpliedRate: 0
             })
         );
-
-        // No operator data
-        _burn(owner, shares, userData, "");
     }
 
     function _safeNegInt88(uint256 x) private pure returns (int88) {

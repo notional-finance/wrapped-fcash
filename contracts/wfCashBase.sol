@@ -11,9 +11,9 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin-upgradeable/contracts/token/ERC777/ERC777Upgradeable.sol";
+import "@openzeppelin-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 
-abstract contract wfCashBase is ERC777Upgradeable, IWrappedfCash {
+abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
     using SafeERC20 for IERC20;
 
     /// @notice address to the NotionalV2 system
@@ -54,13 +54,11 @@ abstract contract wfCashBase is ERC777Upgradeable, IWrappedfCash {
 
         string memory _maturity = Strings.toString(maturity);
 
-        __ERC777_init(
+        __ERC20_init(
             // name
             string(abi.encodePacked("Wrapped f", _symbol, " @ ", _maturity)),
             // symbol
-            string(abi.encodePacked("wf", _symbol, ":", _maturity)),
-            // no default operators
-            new address[](0)
+            string(abi.encodePacked("wf", _symbol, ":", _maturity))
         );
 
         // Set approvals for Notional. It is possible for an asset token address to equal the underlying

@@ -94,9 +94,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
             NotionalV2.batchLend(address(this), action);
         }
 
-        // Mints ERC20 tokens for the receiver, the false flag denotes that we will not do an
-        // operatorAck
-        _mint(receiver, fCashAmount, "", "", false);
+        // Mints ERC20 tokens for the receiver
+        _mint(receiver, fCashAmount);
 
         _sendTokensToReceiver(token, msg.sender, isETH, balanceBefore);
     }
@@ -143,9 +142,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
         if (_operator == _from) userData = _data;
         else operatorData = _data;
 
-        // We don't require a recipient ack here to maintain compatibility
-        // with contracts that don't support ERC777
-        _mint(_from, _value, userData, operatorData, false);
+        // Mint ERC20 tokens for the sender
+        _mint(_from, _value);
 
         // This will allow the fCash to be accepted
         return ERC1155_ACCEPTED;
@@ -156,9 +154,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
     /// @notice Redeems tokens using custom options
     /// @dev re-entrancy is protected on _burn
     function redeem(uint256 amount, RedeemOpts memory opts) public override {
-        bytes memory data = abi.encode(opts);
-        // In this case, the owner is msg.sender based on the OZ ERC777 implementation
-        burn(amount, data);
+        _burnInternal(msg.sender, amount, opts);
     }
 
     /// @notice Redeems tokens to asset tokens
@@ -168,7 +164,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
         address receiver,
         uint32 maxImpliedRate
     ) external override {
-        redeem(
+        _burnInternal(
+            msg.sender,
             amount,
             RedeemOpts({
                 redeemToUnderlying: false,
@@ -186,7 +183,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
         address receiver,
         uint32 maxImpliedRate
     ) external override {
-        redeem(
+        _burnInternal(
+            msg.sender,
             amount,
             RedeemOpts({
                 redeemToUnderlying: true,
@@ -199,19 +197,17 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
 
     /// @notice Called before tokens are burned (redemption) and so we will handle
     /// the fCash properly before and after maturity.
-    function _burn(
+    function _burnInternal(
         address from,
         uint256 amount,
-        bytes memory userData,
-        bytes memory operatorData
-    ) internal override nonReentrant {
+        RedeemOpts memory opts
+    ) internal nonReentrant {
         // Save the total supply value before burning to calculate the cash claim share
         uint256 initialTotalSupply = totalSupply();
-        RedeemOpts memory opts = abi.decode(userData, (RedeemOpts));
         require(opts.receiver != address(0), "Receiver is zero address");
         // This will validate that the account has sufficient tokens to burn and make
         // any relevant underlying stateful changes to balances.
-        super._burn(from, amount, userData, operatorData);
+        super._burn(from, amount);
 
         if (hasMatured()) {
             // If the fCash has matured, then we need to ensure that the account is settled
@@ -244,7 +240,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
                 opts.receiver, // Where to send the fCash
                 getfCashId(), // fCash identifier
                 amount, // Amount of fCash to send
-                userData
+                ""
             );
         } else {
             _sellfCash(

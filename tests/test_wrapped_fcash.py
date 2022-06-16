@@ -605,12 +605,12 @@ def test_withdraw_allowance_4626(wrapper, env, lender, accounts):
     wrapper.mint(100e8, lender.address, {"from": lender})
     balanceBefore = wrapper.balanceOf(lender.address)
 
-    with brownie.reverts("ERC777: insufficient allowance"):
+    with brownie.reverts("ERC20: insufficient allowance"):
         # No allowance set
         wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': accounts[0].address})
     wrapper.approve(accounts[0].address, 10e8, {'from': lender})
 
-    with brownie.reverts("ERC777: insufficient allowance"):
+    with brownie.reverts("ERC20: insufficient allowance"):
         # Insufficient allowance
         wrapper.withdraw(50e18, accounts[0].address, lender.address, {'from': accounts[0].address})
     wrapper.approve(accounts[0].address, 100e8, {'from': lender})
@@ -665,12 +665,12 @@ def test_redeem_allowance_4626(wrapper, env, accounts, lender):
     wrapper.mint(100e8, lender.address, {"from": lender})
     balanceBefore = wrapper.balanceOf(lender.address)
 
-    with brownie.reverts("ERC777: insufficient allowance"):
+    with brownie.reverts("ERC20: insufficient allowance"):
         # No allowance set
         wrapper.redeem(50e8, accounts[0].address, lender.address, {'from': accounts[0].address})
     wrapper.approve(accounts[0].address, 10e8, {'from': lender})
 
-    with brownie.reverts("ERC777: insufficient allowance"):
+    with brownie.reverts("ERC20: insufficient allowance"):
         # Insufficient allowance
         wrapper.redeem(50e8, accounts[0].address, lender.address, {'from': accounts[0].address})
     wrapper.approve(accounts[0].address, 100e8, {'from': lender})
