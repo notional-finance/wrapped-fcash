@@ -189,6 +189,10 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         address receiver,
         address owner
     ) public override returns (uint256) {
+        // This is a noop if the account has already been settled, cheaper to call this than cache
+        // it locally in storage.
+        NotionalV2.settleAccount(address(this));
+
         uint256 shares = previewWithdraw(assets);
 
         if (msg.sender != owner) {

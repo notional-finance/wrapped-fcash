@@ -21,7 +21,7 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
     WETH9 public immutable WETH;
 
     /// @dev Storage slot for fCash id. Read only and set on initialization
-    uint256 private _fCashId;
+    uint64 private _fCashId;
 
     /// @notice Constructor is called only on deployment to set the Notional address, rest of state
     /// is initialized on the proxy.
@@ -43,7 +43,9 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         );
 
         // Get the corresponding fCash ID
-        _fCashId = EncodeDecode.encodeERC1155Id(currencyId, maturity, Constants.FCASH_ASSET_TYPE);
+        uint256 fCashId = EncodeDecode.encodeERC1155Id(currencyId, maturity, Constants.FCASH_ASSET_TYPE);
+        require(fCashId <= uint256(type(uint64).max));
+        _fCashId = uint64(fCashId);
 
         (IERC20 underlyingToken, /* */) = getUnderlyingToken();
         (IERC20 assetToken, /* */, /* */) = getAssetToken();

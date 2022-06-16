@@ -213,7 +213,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
             // If the fCash has matured, then we need to ensure that the account is settled
             // and then we will transfer back the account's share of asset tokens.
 
-            // This is a noop if the account is already settled
+            // This is a noop if the account is already settled, it is cheaper to call this method than
+            // cache it in storage locally
             NotionalV2.settleAccount(address(this));
             uint16 currencyId = getCurrencyId();
 

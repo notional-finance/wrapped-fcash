@@ -628,11 +628,7 @@ def test_withdraw_matured_4626(wrapper, env, lender, accounts):
     chain.mine(1, timestamp=wrapper.getMaturity() + 86400)
     balanceBefore = wrapper.balanceOf(lender.address)
 
-    env.notional.settleAccount(wrapper.address, {"from": lender})
-
-    shares = wrapper.previewWithdraw(50.000000010e18)
     txn = wrapper.withdraw(50.000000010e18, accounts[0].address, lender.address, {'from': lender})
-    assert pytest.approx(shares, abs=100) == txn.events["Withdraw"]["shares"]
     assert wrapper.balanceOf(lender.address) == balanceBefore - txn.events["Withdraw"]["shares"]
     assert env.tokens['DAI'].balanceOf(accounts[0].address) > 50e18
     assert env.tokens['DAI'].balanceOf(accounts[0].address) < 50.1e18
@@ -687,9 +683,6 @@ def test_redeem_matured_4626(wrapper, env, accounts, lender):
     chain.mine(1, timestamp=wrapper.getMaturity())
     balanceBefore = wrapper.balanceOf(lender.address)
 
-    env.notional.settleAccount(wrapper.address, {"from": lender})
-
-    assets = wrapper.previewRedeem(100e8)
     txn = wrapper.redeem(100e8, accounts[0].address, lender.address, {'from': lender})
     assert wrapper.balanceOf(lender.address) == 0
     assert env.tokens['DAI'].balanceOf(accounts[0].address) > 100e18
