@@ -30,10 +30,18 @@ def main():
     markets = env.notional.getActiveMarkets(2)
     gas = {}
 
+    # Compute Wrapper Address
+    txn = factory.computeAddress.transact(2, markets[0][1])
+    gas["ComputeWrapperAddress"] = txn.gas_used - 21368 # subtract initial call cost
+
     # Deploy Wrapper
     txn = factory.deployWrapper(2, markets[0][1])
     wrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
     gas["DeployWrapper"] = txn.gas_used
+
+    # Compute Wrapper Address
+    txn = factory.computeAddress.transact(2, markets[0][1])
+    gas["ComputeWrapperAddressCached"] = txn.gas_used - 21368 # subtract initial call cost
 
     lender = accounts[4]
     env.tokens["DAI"].transfer(lender, 1_000_000e18, {'from': env.whales["DAI_EOA"]})
