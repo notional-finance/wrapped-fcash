@@ -136,6 +136,9 @@ def test_cannot_deploy_invalid_maturity(factory, env):
     markets = env.notional.getActiveMarkets(2)
     with brownie.reverts():
         factory.deployWrapper(2, markets[0][1] + 86400 * 720)
+    
+    with brownie.reverts("Create2: Failed on deploy"):
+        factory.deployWrapper(2, markets[0][1] - 86400 * 90)
 
 # Test Minting fCash
 def test_only_accepts_notional_v2(wrapper, beacon, lender, env):
