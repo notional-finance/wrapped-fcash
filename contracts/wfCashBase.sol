@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.15;
 
 import "./lib/Constants.sol";
 import "./lib/DateTime.sol";
@@ -101,7 +101,7 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
 
     /// @notice fCash is always denominated in 8 decimal places
     function decimals() public pure override returns (uint8) {
-        return 8;
+        return Constants.INTERNAL_TOKEN_DECIMALS;
     }
 
     /// @notice Returns the current market index for this fCash asset. If this returns

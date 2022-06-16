@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.15;
 
 import "./wfCashLogic.sol";
 import "../interfaces/IERC4626.sol";
@@ -57,7 +57,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
             return (assets * uint256(Constants.INTERNAL_TOKEN_PRECISION)) / unitfCashValue;
         }
 
-        return (assets * totalSupply()) / totalAssets();
+        return (assets * supply) / totalAssets();
     }
 
     /** @dev See {IERC4626-convertToAssets} */
@@ -72,22 +72,22 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     }
 
     /** @dev See {IERC4626-maxDeposit} */
-    function maxDeposit(address) public view override returns (uint256) {
+    function maxDeposit(address) external view override returns (uint256) {
         return hasMatured() ? 0 : type(uint256).max;
     }
 
     /** @dev See {IERC4626-maxMint} */
-    function maxMint(address) public view override returns (uint256) {
+    function maxMint(address) external view override returns (uint256) {
         return hasMatured() ? 0 : type(uint88).max;
     }
 
     /** @dev See {IERC4626-maxWithdraw} */
-    function maxWithdraw(address owner) public view override returns (uint256) {
+    function maxWithdraw(address owner) external view override returns (uint256) {
         return previewWithdraw(balanceOf(owner));
     }
 
     /** @dev See {IERC4626-maxRedeem} */
-    function maxRedeem(address owner) public view override returns (uint256) {
+    function maxRedeem(address owner) external view override returns (uint256) {
         return balanceOf(owner);
     }
 
@@ -166,7 +166,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     }
 
     /** @dev See {IERC4626-deposit} */
-    function deposit(uint256 assets, address receiver) public override returns (uint256) {
+    function deposit(uint256 assets, address receiver) external override returns (uint256) {
         uint256 shares = previewDeposit(assets);
         // Will revert if matured
         _mintInternal(assets, _safeUint88(shares), receiver, 0, true);
@@ -175,7 +175,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     }
 
     /** @dev See {IERC4626-mint} */
-    function mint(uint256 shares, address receiver) public override returns (uint256) {
+    function mint(uint256 shares, address receiver) external override returns (uint256) {
         uint256 assets = previewMint(shares);
         // Will revert if matured
         _mintInternal(assets, _safeUint88(shares), receiver, 0, true);
@@ -188,7 +188,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         uint256 assets,
         address receiver,
         address owner
-    ) public override returns (uint256) {
+    ) external override returns (uint256) {
         // This is a noop if the account has already been settled, cheaper to call this than cache
         // it locally in storage.
         NotionalV2.settleAccount(address(this));
@@ -210,17 +210,18 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         uint256 shares,
         address receiver,
         address owner
-    ) public override returns (uint256) {
+    ) external override returns (uint256) {
         // It is more accurate and gas efficient to check the balance of the
         // receiver here than rely on the previewRedeem method.
-        uint256 balanceBefore = IERC20(asset()).balanceOf(receiver);
+        IERC20 token = IERC20(asset());
+        uint256 balanceBefore = token.balanceOf(receiver);
 
         if (msg.sender != owner) {
             _spendAllowance(owner, msg.sender, shares);
         }
         _redeemInternal(shares, receiver, owner);
 
-        uint256 balanceAfter = IERC20(asset()).balanceOf(receiver);
+        uint256 balanceAfter = token.balanceOf(receiver);
         uint256 assets = balanceAfter - balanceBefore;
         emit Withdraw(msg.sender, receiver, owner, assets, shares);
         return assets;
@@ -241,11 +242,5 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
                 maxImpliedRate: 0
             })
         );
-    }
-
-    function _safeNegInt88(uint256 x) private pure returns (int88) {
-        int256 y = -int256(x);
-        require(int256(type(int88).min) <= y);
-        return int88(y);
     }
 }

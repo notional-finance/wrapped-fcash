@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-pragma abicoder v2;
+pragma solidity 0.8.15;
 
 import "./Constants.sol";
 
@@ -60,12 +59,15 @@ library DateTime {
         require(maxMarketIndex <= Constants.MAX_TRADED_MARKET_INDEX, "CG: market index bound");
         uint256 tRef = DateTime.getReferenceTime(blockTime);
 
-        for (uint256 i = 1; i <= maxMarketIndex; i++) {
+        for (uint256 i = 1; i <= maxMarketIndex;) {
             uint256 marketMaturity = tRef + DateTime.getTradedMarket(i);
             // If market matches then is not idiosyncratic
             if (marketMaturity == maturity) return (i, false);
             // Returns the market that is immediately greater than the maturity
             if (marketMaturity > maturity) return (i, true);
+
+            // No possibility for overflow here
+            unchecked { i++; }
         }
 
         revert("CG: no market found");

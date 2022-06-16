@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.15;
 pragma experimental ABIEncoderV2;
 
 import "./wfCashBase.sol";
@@ -112,27 +112,22 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     ) external nonReentrant returns (bytes4) {
         uint256 fCashID = getfCashId();
         // Only accept erc1155 transfers from NotionalV2
-        require(
-            msg.sender == address(NotionalV2) &&
-            // Only accept the fcash id that corresponds to the listed currency and maturity
-            _id == fCashID &&
-            // Protect against signed value underflows
-            int256(_value) > 0,
-            "Invalid"
-        );
+        require(msg.sender == address(NotionalV2));
+        // Only accept the fcash id that corresponds to the listed currency and maturity
+        require(_id == fCashID);
+        // Protect against signed value underflows
+        require(int256(_value) > 0);
 
         // Double check the account's position, these are not strictly necessary and add gas costs
         // but might be good safe guards
         AccountContext memory ac = NotionalV2.getAccountContext(address(this));
         PortfolioAsset[] memory assets = NotionalV2.getAccountPortfolio(address(this));
-        require(
-            ac.hasDebt == 0x00 &&
-            assets.length == 1 &&
-            EncodeDecode.encodeERC1155Id(
+        require(ac.hasDebt == 0x00);
+        require(assets.length == 1);
+        require(EncodeDecode.encodeERC1155Id(
                 assets[0].currencyId,
                 assets[0].maturity,
-                assets[0].assetType
-            ) == fCashID
+                assets[0].assetType) == fCashID
         );
 
         // Update per account fCash balance, calldata from the ERC1155 call is
@@ -153,7 +148,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
 
     /// @notice Redeems tokens using custom options
     /// @dev re-entrancy is protected on _burn
-    function redeem(uint256 amount, RedeemOpts memory opts) public override {
+    function redeem(uint256 amount, RedeemOpts memory opts) external override {
         _burnInternal(msg.sender, amount, opts);
     }
 
@@ -303,8 +298,9 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
 
         if (isETH) {
             WETH.deposit{value: tokensTransferred}();
-            IERC20(address(WETH)).safeTransfer(receiver, tokensTransferred);
-        } else {
+            // No need to use safeTransfer for WETH since it is known to be compatible
+            IERC20(address(WETH)).transfer(receiver, tokensTransferred);
+        } else if (tokensTransferred > 0) {
             token.safeTransfer(receiver, tokensTransferred);
         }
     }

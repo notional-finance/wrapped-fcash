@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-pragma solidity ^0.8.11;
-pragma abicoder v2;
+pragma solidity >=0.7.6;
 
 import "../../contracts/lib/Types.sol";
 

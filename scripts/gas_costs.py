@@ -107,7 +107,6 @@ def main():
     )
 
     chain.mine(1, timestamp=wrapper.getMaturity())
-    env.notional.settleAccount(wrapper.address, {"from": lender})
 
     # Redeem post Maturity (to Asset)
     balance = wrapper.balanceOf(lender.address)
