@@ -3,12 +3,12 @@ pragma solidity 0.8.11;
 pragma experimental ABIEncoderV2;
 
 import "./wfCashBase.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
 
 /// @dev This implementation contract is deployed as an UpgradeableBeacon. Each BeaconProxy
 /// that uses this contract as an implementation will call initialize to set its own fCash id.
 /// That identifier will represent the fCash that this ERC20 wrapper can hold.
-abstract contract wfCashLogic is wfCashBase, ReentrancyGuard {
+abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
     // bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))
     bytes4 internal constant ERC1155_ACCEPTED = 0xf23a6e61;
