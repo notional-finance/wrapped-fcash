@@ -63,8 +63,14 @@ def lender(env, accounts):
                     "marketIndex": 1,
                     "notional": 100_000e8,
                     "minSlippage": 0
+                },
+                {
+                    "tradeActionType": "Lend",
+                    "marketIndex": 2,
+                    "notional": 100_000e8,
+                    "minSlippage": 0
                 }],
-                depositActionAmount=100_000e18,
+                depositActionAmount=200_000e18,
                 withdrawEntireCashBalance=True,
                 redeemToUnderlying=True,
             )
@@ -756,3 +762,59 @@ def test_convert_to_and_from_shares(env, wrapper, lender):
     assert 95e18 < wrapper.totalAssets() and wrapper.totalAssets() < 100e18
     assert 100e8 < wrapper.convertToShares(100e18) and wrapper.convertToShares(100e18) < 105e8
     assert 95e18 < wrapper.convertToAssets(100e8) and wrapper.convertToAssets(100e8) < 100e18
+
+def test_transfer_fcash_off_maturity(env, factory, lender, accounts):
+    markets = env.notional.getActiveMarkets(2)
+    threeMonthWrapperAddress = factory.computeAddress(2, markets[0][1])
+
+    txn = factory.deployWrapper(2, markets[1][1])
+    sixMonthWrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
+    sixMonthfCashId = sixMonthWrapper.getfCashId()
+    env.notional.safeTransferFrom(
+        lender.address,
+        threeMonthWrapperAddress,
+        sixMonthfCashId,
+        10_000e8,
+        "",
+        {"from": lender}
+    )
+
+    txn = factory.deployWrapper(2, markets[0][1])
+    threeMonthWrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
+
+    # Expected that the contract would revert here due to length
+    with brownie.reverts():
+        env.notional.safeTransferFrom(
+            lender.address,
+            threeMonthWrapper.address,
+            threeMonthWrapper.getfCashId(),
+            10_000e8,
+            "",
+            {"from": lender}
+        )
+    
+    assert env.notional.balanceOf(accounts[3], sixMonthfCashId) == 0
+
+    with brownie.reverts():
+        # This call is not authorized
+        threeMonthWrapper.recoverInvalidfCash(sixMonthfCashId, accounts[3], {"from": accounts[3]})
+
+    # This will transfer the fCash
+    threeMonthWrapper.recoverInvalidfCash(sixMonthfCashId, accounts[3], {"from": env.notional.owner()})
+    assert env.notional.balanceOf(accounts[3], sixMonthfCashId) == 10_000e8
+
+    # Now this method will succeed
+    env.notional.safeTransferFrom(
+        lender.address,
+        threeMonthWrapper.address,
+        threeMonthWrapper.getfCashId(),
+        10_000e8,
+        "",
+        {"from": lender}
+    )
+    assert threeMonthWrapper.balanceOf(lender) == 10_000e8
+
+    # This method should fail due to unauthorized fCash
+    with brownie.reverts():
+        threeMonthWrapper.recoverInvalidfCash(threeMonthWrapper.getfCashId(), accounts[3], {"from": env.notional.owner()})
+

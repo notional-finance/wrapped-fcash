@@ -12,8 +12,6 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
     // bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))
     bytes4 internal constant ERC1155_ACCEPTED = 0xf23a6e61;
-    // bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))
-    bytes4 internal constant ERC1155_BATCH_ACCEPTED = 0xbc197c81;
 
     constructor(INotionalV2 _notional, WETH9 _weth) wfCashBase(_notional, _weth) {}
 
@@ -188,6 +186,24 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 maxImpliedRate: maxImpliedRate
             })
         );
+    }
+
+    /// @notice This method is here only in the case where someone has transferred invalid fCash
+    /// to the contract and would prevent ERC1155 transfer hooks from succeeding. In this case the
+    /// owner can recover the invalid fCash to a designated receiver.
+    function recoverInvalidfCash(uint256 fCashId, address receiver) external {
+        // Only the Notional owner can call this method
+        require(msg.sender == NotionalV2.owner());
+        // Cannot transfer the native fCash id of this wrapper
+        require(fCashId != getfCashId());
+        uint256 balance = NotionalV2.balanceOf(address(this), fCashId);
+        // There should be a positive balance before we try to transfer this
+        require(balance > 0);
+        NotionalV2.safeTransferFrom(address(this), receiver, fCashId, balance, "");
+        
+        // Double check that we don't incur debt
+        AccountContext memory ac = NotionalV2.getAccountContext(address(this));
+        require(ac.hasDebt == 0x00);
     }
 
     /// @notice Called before tokens are burned (redemption) and so we will handle

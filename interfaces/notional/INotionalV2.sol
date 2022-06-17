@@ -113,4 +113,7 @@ interface INotionalV2 {
 
     function batchLend(address account, BatchLend[] calldata actions) external;
 
+    function owner() external view returns (address);
+
+    function balanceOf(address account, uint256 id) external view returns (uint256);
 }
