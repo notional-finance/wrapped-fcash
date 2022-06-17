@@ -4,7 +4,7 @@ import eth_abi
 from tests.helpers import get_balance_trade_action, get_lend_action
 from brownie import Contract, wfCashERC4626, network, nUpgradeableBeacon
 from brownie.project import WrappedFcashProject
-from brownie.convert.datatypes import Wei
+from brownie.convert.datatypes import Wei, HexString
 from brownie.convert import to_bytes
 from brownie.network import Chain
 from scripts.EnvironmentConfig import getEnvironment
@@ -818,3 +818,100 @@ def test_transfer_fcash_off_maturity(env, factory, lender, accounts):
     with brownie.reverts():
         threeMonthWrapper.recoverInvalidfCash(threeMonthWrapper.getfCashId(), accounts[3], {"from": env.notional.owner()})
 
+def token_with_fees(env, factory, accounts, MockERC20, MockAggregator, feeAmount):
+    zeroAddress = HexString(0, type_str="bytes20")
+    token = MockERC20.deploy("Transfer Fee", "TEST", 18, feeAmount, {"from": accounts[0]})
+    aggregator = MockAggregator.deploy(18, {"from": accounts[0]})
+    aggregator.setAnswer(1e18)
+    txn = env.notional.listCurrency(
+        (token.address, feeAmount > 0, 4, 18, 0),
+        (zeroAddress, False, 0, 0, 0),
+        aggregator.address,
+        False,
+        110,
+        75,
+        108,
+        {"from": env.notional.owner()}
+    )
+    currencyId = txn.events["ListCurrency"]["newCurrencyId"]
+    env.notional.enableCashGroup(
+        currencyId,
+        zeroAddress,
+        (2, 20, 30, 50, 150, 150, 40, 50, 50, (95, 90), (21, 21)),
+        "Test Token",
+        "TEST",
+        {"from": env.notional.owner()}
+    )
+
+    env.notional.updateDepositParameters(
+        currencyId,
+        [int(0.5e8), int(0.5e8)],
+        [int(0.8e9), int(0.8e9)],
+        {"from": env.notional.owner()}
+    )
+    env.notional.updateInitializationParameters(
+        currencyId,
+        # Annualized Anchor Rates
+        [int(0.02e9), int(0.02e9)],
+        # Target proportion
+        [int(0.5e9), int(0.5e9)],
+        {"from": env.notional.owner()}
+    )
+
+    token.approve(env.notional.address, 2 ** 255, {"from": accounts[0]})
+    env.notional.batchBalanceAction(
+        accounts[0], [(3, currencyId, 10_000_000e18, 0, False, False)], {"from": accounts[0]}
+    )
+
+    env.notional.initializeMarkets(currencyId, True, {"from": accounts[0]})
+
+    return (token, currencyId)
+
+def test_mint_and_redeem_tokens_with_transfer_fees(env, factory, accounts, MockERC20, MockAggregator):
+    (token, currencyId) = token_with_fees(env, factory, accounts, MockERC20, MockAggregator, 0.01e18)
+    markets = env.notional.getActiveMarkets(currencyId)
+    txn = factory.deployWrapper(currencyId, markets[0][1])
+    wrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
+
+    token.transfer(accounts[1], 250e18, {"from": accounts[0]})
+    token.approve(wrapper.address, 250e18, {"from": accounts[1]})
+    txn = wrapper.mintViaUnderlying(105e18, 100e8, accounts[1], 0, {"from": accounts[1]})
+    assert wrapper.balanceOf(accounts[1]) == 100e8
+    assert token.balanceOf(wrapper.address) == 0
+
+    wrapper.mintViaAsset(105e18, 100e8, accounts[1], 0, {"from": accounts[1]})
+    assert wrapper.balanceOf(accounts[1]) == 200e8
+    assert token.balanceOf(wrapper.address) == 0
+
+    wrapper.redeemToUnderlying(100e8, accounts[1], 0, {"from": accounts[1]})
+    assert wrapper.balanceOf(accounts[1]) == 100e8
+    assert token.balanceOf(wrapper.address) == 0
+
+    wrapper.redeemToAsset(100e8, accounts[1], 0, {"from": accounts[1]})
+    assert wrapper.balanceOf(accounts[1]) == 0
+    assert token.balanceOf(wrapper.address) == 0
+
+def test_mint_and_redeem_non_mintable_tokens(env, factory, lender, accounts, MockERC20, MockAggregator):
+    (token, currencyId) = token_with_fees(env, factory, accounts, MockERC20, MockAggregator, 0)
+    markets = env.notional.getActiveMarkets(currencyId)
+    txn = factory.deployWrapper(currencyId, markets[0][1])
+    wrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
+
+    token.transfer(accounts[1], 200e18, {"from": accounts[0]})
+    token.approve(wrapper.address, 200e18, {"from": accounts[1]})
+    wrapper.mintViaUnderlying(100e18, 100e8, accounts[1], 0, {"from": accounts[1]})
+
+    assert wrapper.balanceOf(accounts[1]) == 100e8
+    assert token.balanceOf(accounts[1]) <= 102e18
+
+    wrapper.mintViaAsset(100e18, 100e8, accounts[1], 0, {"from": accounts[1]})
+    assert wrapper.balanceOf(accounts[1]) == 200e8
+    assert token.balanceOf(accounts[1]) <= 1e18
+
+    wrapper.redeemToUnderlying(100e8, accounts[1], 0, {"from": accounts[1]})
+    assert wrapper.balanceOf(accounts[1]) == 100e8
+    assert 98e18 < token.balanceOf(accounts[1]) and token.balanceOf(accounts[1]) <= 102e18
+
+    wrapper.redeemToAsset(100e8, accounts[1], 0, {"from": accounts[1]})
+    assert wrapper.balanceOf(accounts[1]) == 0
+    assert 198e18 < token.balanceOf(accounts[1]) and token.balanceOf(accounts[1]) <= 200e18

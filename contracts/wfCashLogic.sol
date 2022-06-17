@@ -53,30 +53,44 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         bool useUnderlying
     ) internal nonReentrant {
         require(!hasMatured(), "fCash matured");
-        (IERC20 token, bool isETH) = getToken(useUnderlying);
+        (IERC20 token, bool isETH, bool hasTransferFee, bool isNonMintable) = _getTokenForMintInternal(useUnderlying);
+        // In this case, the asset token == the underlying token and we should just rewrite the useUnderlying
+        // flag to false. The same amount of tokens will be transferred in either case so this method will behave
+        // just like it has asset tokens.
+        if (isNonMintable) useUnderlying = false;
         uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
+        uint256 msgValue;
 
         // If dealing in ETH, we use WETH in the wrapper instead of ETH. NotionalV2 uses
         // ETH natively but due to pull payment requirements for batchLend, it does not support
         // ETH. batchLend only supports ERC20 tokens like cETH or aETH. Since the wrapper is a compatibility
         // layer, it will support WETH so integrators can deal solely in ERC20 tokens. Instead of using
         // "batchLend" we will use "batchBalanceActionWithTrades". The difference is that "batchLend"
-        // is more gas efficient (does not require and additional redeem call to asset tokens). If using cETH
-        // then everything will proceed via batchLend.
-        if (isETH) {
-            IERC20((address(WETH))).safeTransferFrom(msg.sender, address(this), depositAmountExternal);
-            WETH.withdraw(depositAmountExternal);
+        // is more gas efficient (does not require an additional redeem call to asset tokens). If using cETH
+        // then everything will proceed via batchLend. Similar logic applies to tokens with transfer fees
+        if (isETH || hasTransferFee) {
+            if (isETH) {
+                // safeTransferFrom not required since WETH is known to be compatible
+                IERC20((address(WETH))).transferFrom(msg.sender, address(this), depositAmountExternal);
+                WETH.withdraw(depositAmountExternal);
+                msgValue = depositAmountExternal;
+            } else {
+                token.safeTransferFrom(msg.sender, address(this), depositAmountExternal);
+                depositAmountExternal = token.balanceOf(address(this)) - balanceBefore;
+            }
 
-            BalanceActionWithTrades[] memory action = EncodeDecode.encodeLendETHTrade(
+            BalanceActionWithTrades[] memory action = EncodeDecode.encodeLegacyLendTrade(
                 getCurrencyId(),
                 getMarketIndex(),
                 depositAmountExternal,
                 fCashAmount,
-                minImpliedRate
+                minImpliedRate,
+                useUnderlying,
+                isNonMintable
             );
             // Notional will return any residual ETH as the native token. When we _sendTokensToReceiver those
             // native ETH tokens will be wrapped back to WETH.
-            NotionalV2.batchBalanceAndTradeAction{value: depositAmountExternal}(address(this), action);
+            NotionalV2.batchBalanceAndTradeAction{value: msgValue}(address(this), action);
         } else {
             // Transfers tokens in for lending, Notional will transfer from this contract.
             token.safeTransferFrom(msg.sender, address(this), depositAmountExternal);
@@ -95,6 +109,10 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         // Mints ERC20 tokens for the receiver
         _mint(receiver, fCashAmount);
 
+        // Residual tokens will be sent back to msg.sender, not the receiver. The msg.sender
+        // was used to transfer tokens in and these are any residual tokens left that were not
+        // lent out. Sending these tokens back to the receiver risks them getting locked on a
+        // contract that does not have the capability to transfer them off
         _sendTokensToReceiver(token, msg.sender, isETH, balanceBefore);
     }
 
@@ -219,6 +237,13 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         // This will validate that the account has sufficient tokens to burn and make
         // any relevant underlying stateful changes to balances.
         super._burn(from, amount);
+
+        if (opts.redeemToUnderlying) {
+            // Check if the token type is non-mintable, in this case we cannot redeem to underlying
+            // so we have to rewrite the variable
+            (/* */, /* */, TokenType tokenType) = getAssetToken();
+            if (tokenType == TokenType.NonMintable) opts.redeemToUnderlying = false;
+        }
 
         if (hasMatured()) {
             // If the fCash has matured, then we need to ensure that the account is settled

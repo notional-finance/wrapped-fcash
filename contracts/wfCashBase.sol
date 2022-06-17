@@ -149,6 +149,24 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         isETH = address(token) == Constants.ETH_ADDRESS;
     }
 
+    /// @dev Internal method with more flags required for use inside mint internal
+    function _getTokenForMintInternal(bool useUnderlying) internal view returns (
+        IERC20 token, bool isETH, bool hasTransferFee, bool isNonMintable
+    ) {
+        (Token memory asset, Token memory underlying) = NotionalV2.getCurrency(getCurrencyId());
+
+        isNonMintable = asset.tokenType == TokenType.NonMintable;
+        if (isNonMintable || !useUnderlying) {
+            token = IERC20(asset.tokenAddress);
+            hasTransferFee = asset.hasTransferFee;
+        } else if (useUnderlying) {
+            token = IERC20(underlying.tokenAddress);
+            hasTransferFee = underlying.hasTransferFee;
+        }
+
+        isETH = address(token) == Constants.ETH_ADDRESS;
+    }
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
