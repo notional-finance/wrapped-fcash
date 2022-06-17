@@ -296,11 +296,17 @@ def test_redeem_post_maturity_underlying(wrapper, lender, env):
         {"from": lender}
     )
 
+    balanceBefore = env.tokens["DAI"].balanceOf(lender.address)
+    # For underlying tokens we need to settle the account and mine a few blocks to ensure
+    # that the balance check works. Since Compound uses blocks instead of timestamps to accrue
+    # interest we need to actually mine a few blocks to get the interest accrued to increase
     chain.mine(1, timestamp=wrapper.getMaturity())
+    env.notional.settleAccount(wrapper.address, {"from": lender.address})
+    chain.mine(50)
     wrapper.redeemToUnderlying(50_000e8, lender.address, 0, {"from": lender})
 
     assert wrapper.balanceOf(lender.address) == 50_000e8
-    assert env.tokens["DAI"].balanceOf(lender.address) >= 50_000e18
+    assert env.tokens["DAI"].balanceOf(lender.address) - balanceBefore >= 50_000e18
 
 def test_redeem_failure_slippage(wrapper, lender, env):
     env.notional.safeTransferFrom(
@@ -371,7 +377,7 @@ def test_mint_and_redeem_fcash_via_underlying(wrapper, lender, env):
     balanceAfter = env.tokens["DAI"].balanceOf(lender.address)
     balanceChange = balanceAfter - balanceBefore 
 
-    assert 9700e18 <= balanceChange and balanceChange <= 9990e18
+    assert 9700e18 <= balanceChange and balanceChange <= 9995e18
     portfolio = env.notional.getAccount(wrapper.address)[2]
     assert len(portfolio) == 0
     assert wrapper.balanceOf(lender.address) == 0
@@ -413,7 +419,7 @@ def test_mint_and_redeem_fusdc_via_underlying(factory, env):
     balanceAfter = env.tokens["USDC"].balanceOf(env.whales["USDC"].address)
     balanceChange = balanceAfter - balanceBefore 
 
-    assert 9700e6 <= balanceChange and balanceChange <= 9990e6
+    assert 9700e6 <= balanceChange and balanceChange <= 9995e6
     portfolio = env.notional.getAccount(wrapper.address)[2]
     assert len(portfolio) == 0
     assert wrapper.balanceOf(env.whales["USDC"].address) == 0
@@ -690,6 +696,8 @@ def test_redeem_matured_4626(wrapper, env, accounts, lender):
     wrapper.mint(100e8, lender.address, {"from": lender})
 
     chain.mine(1, timestamp=wrapper.getMaturity())
+    env.notional.settleAccount(lender.address, {"from": lender})
+    chain.mine(50)
     balanceBefore = wrapper.balanceOf(lender.address)
 
     txn = wrapper.redeem(100e8, accounts[0].address, lender.address, {'from': lender})
@@ -915,3 +923,24 @@ def test_mint_and_redeem_non_mintable_tokens(env, factory, lender, accounts, Moc
     wrapper.redeemToAsset(100e8, accounts[1], 0, {"from": accounts[1]})
     assert wrapper.balanceOf(accounts[1]) == 0
     assert 198e18 < token.balanceOf(accounts[1]) and token.balanceOf(accounts[1]) <= 200e18
+
+def test_redeem_usdc_post_maturity(factory, env):
+    markets = env.notional.getActiveMarkets(2)
+    txn = factory.deployWrapper(3, markets[0][1])
+    wrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
+
+    env.tokens["USDC"].approve(wrapper.address, 2 ** 255 - 1, {'from': env.whales["USDC"].address})
+    wrapper.mintViaUnderlying(
+        10_000e6,
+        10_000e8,
+        env.whales["USDC"].address,
+        0,
+        {'from': env.whales["USDC"].address}
+    )
+
+    balanceBefore = env.tokens["USDC"].balanceOf(env.whales['USDC'].address)
+    chain.mine(1, timestamp=wrapper.getMaturity())
+    wrapper.redeemToUnderlying(10_000e8, env.whales['USDC'].address, 0, {"from": env.whales['USDC']})
+
+    assert wrapper.balanceOf(env.whales['USDC'].address) == 0
+    assert env.tokens["USDC"].balanceOf(env.whales['USDC'].address) - balanceBefore >= 10_000e6
