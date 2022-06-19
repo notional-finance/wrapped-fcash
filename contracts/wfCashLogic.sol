@@ -208,7 +208,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
 
     /// @notice This method is here only in the case where someone has transferred invalid fCash
     /// to the contract and would prevent ERC1155 transfer hooks from succeeding. In this case the
-    /// owner can recover the invalid fCash to a designated receiver.
+    /// owner can recover the invalid fCash to a designated receiver. This can only occur if the fCash
+    /// is transferred prior to contract creation.
     function recoverInvalidfCash(uint256 fCashId, address receiver) external {
         // Only the Notional owner can call this method
         require(msg.sender == NotionalV2.owner());

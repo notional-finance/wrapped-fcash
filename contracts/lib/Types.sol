@@ -7,12 +7,14 @@ pragma solidity >=0.7.6;
 ///  - cETH: Special handling for cETH tokens
 ///  - Ether: the one and only
 ///  - NonMintable: tokens that do not have an underlying (therefore not cTokens)
+///  - aToken: Aave interest bearing tokens
 enum TokenType {
     UnderlyingToken,
     cToken,
     cETH,
     Ether,
-    NonMintable
+    NonMintable,
+    aToken
 }
 
 /// @notice Specifies the different trade action types in the system. Each trade action type is

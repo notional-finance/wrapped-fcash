@@ -1,8 +1,9 @@
 import pytest
 import brownie
 import eth_abi
+import json
 from tests.helpers import get_balance_trade_action, get_lend_action
-from brownie import Contract, wfCashERC4626, network, nUpgradeableBeacon
+from brownie import Contract, wfCashERC4626, network, nUpgradeableBeacon, MockAggregator
 from brownie.project import WrappedFcashProject
 from brownie.convert.datatypes import Wei, HexString
 from brownie.convert import to_bytes
@@ -18,15 +19,49 @@ def run_around_tests():
     chain.revert()
 
 @pytest.fixture()
-def env():
+def env(accounts):
     name = network.show_active()
     if name == 'mainnet-fork':
         environment = getEnvironment('mainnet')
-        environment.notional.upgradeTo('0x16eD130F7A6dcAc7e3B0617A7bafa4b470189962', {'from': environment.owner})
+        environment.notional.upgradeTo('0x2C67B0C0493e358cF368073bc0B5fA6F01E981e0', {'from': environment.owner})
         environment.notional.updateAssetRate(1, "0x8E3D447eBE244db6D28E2303bCa86Ef3033CFAd6", {"from": environment.owner})
         environment.notional.updateAssetRate(2, "0x719993E82974f5b5eA0c5ebA25c260CD5AF78E00", {"from": environment.owner})
         environment.notional.updateAssetRate(3, "0x612741825ACedC6F88D8709319fe65bCB015C693", {"from": environment.owner})
         environment.notional.updateAssetRate(4, "0x39D9590721331B13C8e9A42941a2B961B513E69d", {"from": environment.owner})
+
+        # Borrow a significant amount of USDC to get the interest rates up
+        environment.notional.batchBalanceAndTradeAction(
+            accounts[5],
+            [ 
+                get_balance_trade_action(
+                    1,
+                    "DepositUnderlying",
+                    [],
+                    depositActionAmount=900e18
+                ),
+                get_balance_trade_action(
+                    2,
+                    "None",
+                    [{
+                        "tradeActionType": "Borrow",
+                        "marketIndex": 1,
+                        "notional": 5_000_000e8,
+                        "maxSlippage": 0
+                    }],
+                ),
+                get_balance_trade_action(
+                    3,
+                    "None",
+                    [{
+                        "tradeActionType": "Borrow",
+                        "marketIndex": 1,
+                        "notional": 5_000_000e8,
+                        "maxSlippage": 0
+                    }],
+                )
+            ], { "from": accounts[5], "value": 900e18 }
+        )
+
         return environment
     elif name == 'kovan-fork':
         return getEnvironment('kovan')
@@ -377,7 +412,7 @@ def test_mint_and_redeem_fcash_via_underlying(wrapper, lender, env):
     balanceAfter = env.tokens["DAI"].balanceOf(lender.address)
     balanceChange = balanceAfter - balanceBefore 
 
-    assert 9700e18 <= balanceChange and balanceChange <= 9995e18
+    assert 9700e18 <= balanceChange and balanceChange <= 9997e18
     portfolio = env.notional.getAccount(wrapper.address)[2]
     assert len(portfolio) == 0
     assert wrapper.balanceOf(lender.address) == 0
@@ -419,7 +454,7 @@ def test_mint_and_redeem_fusdc_via_underlying(factory, env):
     balanceAfter = env.tokens["USDC"].balanceOf(env.whales["USDC"].address)
     balanceChange = balanceAfter - balanceBefore 
 
-    assert 9700e6 <= balanceChange and balanceChange <= 9995e6
+    assert 9700e6 <= balanceChange and balanceChange <= 9997e6
     portfolio = env.notional.getAccount(wrapper.address)[2]
     assert len(portfolio) == 0
     assert wrapper.balanceOf(env.whales["USDC"].address) == 0
@@ -944,3 +979,116 @@ def test_redeem_usdc_post_maturity(factory, env):
 
     assert wrapper.balanceOf(env.whales['USDC'].address) == 0
     assert env.tokens["USDC"].balanceOf(env.whales['USDC'].address) - balanceBefore >= 10_000e6
+
+def deploy_atoken_aggregator(lendingPool, aToken, deployer):
+    with open("./tests/aTokenAggregator.json", "r") as a:
+        artifact = json.load(a)
+
+    createdContract = network.web3.eth.contract(abi=artifact["abi"], bytecode=artifact["bytecode"])
+    txn = createdContract.constructor(lendingPool, aToken).buildTransaction(
+        {"from": deployer.address, "nonce": deployer.nonce}
+    )
+    # This does a manual deployment of a contract
+    tx_receipt = deployer.transfer(data=txn["data"])
+
+    return Contract.from_abi("aTokenAggregator", tx_receipt.contract_address, abi=artifact["abi"], owner=deployer)
+
+def test_mint_and_redeem_atoken(factory, env, accounts):
+    aToken = env.tokens["aDAI"]
+    underlying = env.tokens["DAI"]
+    env.notional.setLendingPool("0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9", {"from": env.notional.owner()})
+
+    aggregator = deploy_atoken_aggregator(
+        "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
+        aToken.address,
+        accounts[0]
+    )
+    rateOracle = MockAggregator.deploy(18, {"from": accounts[0]})
+    rateOracle.setAnswer(0.01e18, {"from": accounts[0]})
+
+    txn = env.notional.listCurrency(
+        (aToken.address, False, 5, aToken.decimals(), 0),
+        (underlying.address, False, 0, underlying.decimals(), 0),
+        rateOracle.address,
+        False,
+        130,
+        75,
+        108,
+        {"from": env.notional.owner()},
+    )
+
+    currencyId = txn.events["ListCurrency"]["newCurrencyId"]
+    env.notional.updateAssetRate(currencyId, aggregator.address, {"from": env.notional.owner()})
+
+    env.notional.enableCashGroup(
+        currencyId,
+        aggregator.address,
+        (2, 10, 30, 50, 30, 30, 40, 20, 20, (99, 98), (21, 21)),
+        "DAI",
+        "DAI",
+        {"from": env.notional.owner()},
+    )
+    env.tokens['aDAI'].approve(
+        env.notional.address, 2 ** 255 - 1, {"from": env.whales['aDAI']}
+    )
+
+    env.notional.updateDepositParameters(
+        currencyId,
+        # Deposit shares
+        [int(0.5e8), int(0.5e8)],
+        # Leverage thresholds
+        [int(0.8e9), int(0.8e9)],
+        {"from": env.notional.owner()}
+    )
+    env.notional.updateInitializationParameters(
+        currencyId,
+        # Annualized Anchor Rates
+        [int(0.02e9), int(0.02e9)],
+        # Target proportion
+        [int(0.5e9), int(0.5e9)],
+        {"from": env.notional.owner()}
+    )
+    env.notional.updateTokenCollateralParameters(
+        currencyId,
+        20,  # residual purchase incentive bps
+        85,  # pv haircut
+        24,  # time buffer hours
+        80,  # cash withholding
+        92,  # liquidation haircut percentage
+        {"from": env.notional.owner()}
+    )
+
+    env.notional.batchBalanceAction(
+        env.whales['aDAI'].address,
+        [(3, currencyId, 9_000_000e18, 0, False, False)],
+        {"from": env.whales['aDAI']}
+    )
+    env.notional.initializeMarkets(currencyId, True, {"from": env.notional.owner()})
+
+    markets = env.notional.getActiveMarkets(currencyId)
+    txn = factory.deployWrapper(currencyId, markets[0][1])
+    wrapper = Contract.from_abi("Wrapper", txn.events['WrapperDeployed']['wrapper'], wfCashERC4626.abi)
+    
+    # mintViaAsset
+    aToken.approve(wrapper.address, 2 ** 255 - 1, {'from': env.whales['aDAI']})
+    wrapper.mintViaAsset(10_000e18, 10_000e8, env.whales['aDAI'], 0, {"from": env.whales['aDAI']})
+    assert wrapper.balanceOf(env.whales['aDAI']) == 10_000e8
+
+    # mintViaUnderlying, mint, deposit (all using DAI)
+    underlying.approve(wrapper.address, 2 ** 255 - 1, {'from': env.whales['DAI_EOA']})
+    txn = wrapper.mintViaUnderlying(10_000e18, 10_000e8, env.whales['DAI_EOA'], 0, {"from": env.whales['DAI_EOA']})
+    wrapper.mint(10_000e8, env.whales['DAI_EOA'], {"from": env.whales['DAI_EOA']})
+    # wrapper.deposit(10_000e18, env.whales['DAI_EOA'], {"from": env.whales['DAI_EOA']})
+    assert wrapper.balanceOf(env.whales['DAI_EOA']) == 20_000e8
+
+    # redeemToAsset
+    wrapper.redeemToAsset(5_000e8, accounts[1], 0, {"from": env.whales['aDAI']})
+    assert wrapper.balanceOf(env.whales['aDAI']) == 5_000e8
+    assert 4_950e18 < aToken.balanceOf(accounts[1]) and aToken.balanceOf(accounts[1]) < 5_000e18
+
+    # redeemToUnderlying, redeem, withdraw (all using DAI)
+    wrapper.redeemToUnderlying(5_000e8, accounts[1], 0, {"from": env.whales['DAI_EOA']})
+    wrapper.redeem(5_000e8, accounts[1], env.whales['DAI_EOA'], {"from": env.whales['DAI_EOA']})
+    #wrapper.withdraw(5_000e18, accounts[1], env.whales['DAI_EOA'], {"from": env.whales['DAI_EOA']})
+    assert wrapper.balanceOf(env.whales['DAI_EOA']) == 10_000e8
+    assert 9_900e18 < underlying.balanceOf(accounts[1]) and underlying.balanceOf(accounts[1]) < 10_000e18
