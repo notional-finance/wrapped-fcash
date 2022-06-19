@@ -118,6 +118,8 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         } else {
             // This is how much fCash received from depositing assets
             (uint16 currencyId, uint40 maturity) = getDecodedID();
+            // This method will round up when calculating the depositAmountUnderlying (happens inside
+            // CalculationViews._convertToAmountExternal).
             (uint256 depositAmountUnderlying, /* */, /* */, /* */) = NotionalV2.getDepositFromfCashLend(
                 currencyId,
                 shares,
@@ -132,6 +134,13 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4626-previewWithdraw} */
     function previewWithdraw(uint256 assets) public view override returns (uint256 shares) {
+        // Although the ERC4626 standard suggests that shares is rounded up in this calculation,
+        // it would not have much of an effect for wrapped fCash in practice. The actual amount
+        // of assets returned to the user is not dictated by the `assets` parameter supplied here
+        // but is actually calculated inside _burnInternal (rounding against the user) when fCash
+        // has matured or inside the NotionalV2 AMM when withdrawing fCash early. In either case,
+        // the number of shares returned here will be burned exactly and the user will receive close
+        // to the assets input, but not exactly.
         if (hasMatured()) {
             shares = convertToShares(assets);
         } else {
