@@ -36,3 +36,6 @@ def main():
 
     with open("abi/WrappedfCash.json", "w") as f:
         json.dump(wfCashERC4626.abi, f, indent=4, sort_keys=True)
+
+    with open("abi/WrappedfCashFactory.json", "w") as f:
+        json.dump(WrappedfCashFactory.abi, f, indent=4, sort_keys=True)

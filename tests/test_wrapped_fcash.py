@@ -154,7 +154,7 @@ def test_deploy_wrapped_fcash(factory, env):
 def test_upgrade_wrapped_fcash(factory, beacon, wrapper, env):
     assert wrapper.getCurrencyId() == 2
 
-    beacon.upgradeTo(factory.address, {"from": env.deployer})
+    beacon.upgradeTo(factory.address, {"from": beacon.owner()})
 
     with brownie.reverts():
         wrapper.getCurrencyId()
@@ -412,7 +412,7 @@ def test_mint_and_redeem_fcash_via_underlying(wrapper, lender, env):
     balanceAfter = env.tokens["DAI"].balanceOf(lender.address)
     balanceChange = balanceAfter - balanceBefore 
 
-    assert 9700e18 <= balanceChange and balanceChange <= 9997e18
+    assert 9700e18 <= balanceChange and balanceChange <= 9998e18
     portfolio = env.notional.getAccount(wrapper.address)[2]
     assert len(portfolio) == 0
     assert wrapper.balanceOf(lender.address) == 0
@@ -571,11 +571,14 @@ def test_deposit_4626(wrapper, env, lender):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
 
     # There is a little drift between these two calls
-    preview = wrapper.previewDeposit(100e18)
-    txn = wrapper.deposit(100e18, lender.address, {"from": lender})
+    preview = wrapper.previewDeposit(Wei(100e18))
+    balanceBefore = env.tokens["DAI"].balanceOf(lender.address)
+    txn = wrapper.deposit(Wei(100e18), lender.address, {"from": lender})
+    balanceAfter = env.tokens["DAI"].balanceOf(lender.address)
 
     assert pytest.approx(wrapper.balanceOf(lender.address), abs=100) == preview
     assert txn.events['Deposit']['shares'] == wrapper.balanceOf(lender.address)
+    assert pytest.approx(balanceBefore - balanceAfter, abs=1e11) == 100e18
 
 def test_deposit_receiver_4626(wrapper, env, lender, accounts):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
@@ -704,7 +707,7 @@ def test_redeem_receiver_4626(wrapper, env, accounts, lender):
     assets = wrapper.previewRedeem(100e8)
     wrapper.redeem(100e8, accounts[0].address, lender.address, {'from': lender.address})
     assert wrapper.balanceOf(lender.address) == 0
-    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), abs=1e11) == assets
+    assert pytest.approx(env.tokens['DAI'].balanceOf(accounts[0].address), abs=5e11) == assets
 
 def test_redeem_allowance_4626(wrapper, env, accounts, lender):
     env.tokens["DAI"].approve(wrapper.address, 2 ** 255 - 1, {'from': lender})
