@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity >=0.7.6;
 
 /// @title All shared constants for the Notional system should be declared here.
 library Constants {
@@ -7,6 +7,7 @@ library Constants {
 
     // Token precision used for all internal balances, TokenHandler library ensures that we
     // limit the dust amount caused by precision mismatches
+    uint8 internal constant INTERNAL_TOKEN_DECIMALS = 8;
     int256 internal constant INTERNAL_TOKEN_PRECISION = 1e8;
 
     // Max number of traded markets, also used as the maximum number of assets in a portfolio array

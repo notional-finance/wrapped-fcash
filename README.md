@@ -1,6 +1,6 @@
 # Notional Wrapped fCash
 
-Wrapped fCash (wfCash) is a compatibility layer for developers who want to integrate with Notional lending but unable to use fCash's native ERC1155 specification. wfCash is compatible with ERC20, ERC777, and ERC4626.
+Wrapped fCash (wfCash) is a compatibility layer for developers who want to integrate with Notional lending but unable to use fCash's native ERC1155 specification. wfCash is compatible with ERC20 and ERC4626.
 
 Technical Walkthrough: https://www.youtube.com/watch?v=RvCYFR2Yjls
 

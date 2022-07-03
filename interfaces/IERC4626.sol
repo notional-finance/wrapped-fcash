@@ -1,4 +1,4 @@
-pragma solidity ^0.8.0;
+pragma solidity >=0.7.6;
 
 interface IERC4626 {
     event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares);

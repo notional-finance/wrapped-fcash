@@ -15,7 +15,7 @@ networks:
         fork_block: 13986174
   mainnet-fork:
     cmd_settings:
-      fork_block: 14963501
+      fork_block: 15007400
   kovan-fork:
     cmd_settings:
       fork_block: 31456000

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-pragma solidity ^0.8.11;
-pragma abicoder v2;
+pragma solidity >=0.7.6;
 
 import "../../contracts/lib/Types.sol";
 
@@ -114,4 +113,7 @@ interface INotionalV2 {
 
     function batchLend(address account, BatchLend[] calldata actions) external;
 
+    function owner() external view returns (address);
+
+    function balanceOf(address account, uint256 id) external view returns (uint256);
 }

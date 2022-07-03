@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.15;
 
 import "./lib/Constants.sol";
 import "./lib/DateTime.sol";
@@ -11,9 +11,9 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin-upgradeable/contracts/token/ERC777/ERC777Upgradeable.sol";
+import "@openzeppelin-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 
-abstract contract wfCashBase is ERC777Upgradeable, IWrappedfCash {
+abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
     using SafeERC20 for IERC20;
 
     /// @notice address to the NotionalV2 system
@@ -21,7 +21,7 @@ abstract contract wfCashBase is ERC777Upgradeable, IWrappedfCash {
     WETH9 public immutable WETH;
 
     /// @dev Storage slot for fCash id. Read only and set on initialization
-    uint256 private _fCashId;
+    uint64 private _fCashId;
 
     /// @notice Constructor is called only on deployment to set the Notional address, rest of state
     /// is initialized on the proxy.
@@ -35,6 +35,7 @@ abstract contract wfCashBase is ERC777Upgradeable, IWrappedfCash {
     function initialize(uint16 currencyId, uint40 maturity) external override initializer {
         CashGroupSettings memory cashGroup = NotionalV2.getCashGroup(currencyId);
         require(cashGroup.maxMarketIndex > 0, "Invalid currency");
+        require(maturity > block.timestamp, "Invalid maturity");
         // Ensure that the maturity is not past the max market index, also ensure that the maturity
         // is not in the past. This statement will allow idiosyncratic (non-tradable) fCash assets.
         require(
@@ -43,7 +44,9 @@ abstract contract wfCashBase is ERC777Upgradeable, IWrappedfCash {
         );
 
         // Get the corresponding fCash ID
-        _fCashId = EncodeDecode.encodeERC1155Id(currencyId, maturity, Constants.FCASH_ASSET_TYPE);
+        uint256 fCashId = EncodeDecode.encodeERC1155Id(currencyId, maturity, Constants.FCASH_ASSET_TYPE);
+        require(fCashId <= uint256(type(uint64).max));
+        _fCashId = uint64(fCashId);
 
         (IERC20 underlyingToken, /* */) = getUnderlyingToken();
         (IERC20 assetToken, /* */, /* */) = getAssetToken();
@@ -54,13 +57,11 @@ abstract contract wfCashBase is ERC777Upgradeable, IWrappedfCash {
 
         string memory _maturity = Strings.toString(maturity);
 
-        __ERC777_init(
+        __ERC20_init(
             // name
             string(abi.encodePacked("Wrapped f", _symbol, " @ ", _maturity)),
             // symbol
-            string(abi.encodePacked("wf", _symbol, ":", _maturity)),
-            // no default operators
-            new address[](0)
+            string(abi.encodePacked("wf", _symbol, ":", _maturity))
         );
 
         // Set approvals for Notional. It is possible for an asset token address to equal the underlying
@@ -101,7 +102,7 @@ abstract contract wfCashBase is ERC777Upgradeable, IWrappedfCash {
 
     /// @notice fCash is always denominated in 8 decimal places
     function decimals() public pure override returns (uint8) {
-        return 8;
+        return Constants.INTERNAL_TOKEN_DECIMALS;
     }
 
     /// @notice Returns the current market index for this fCash asset. If this returns
@@ -147,4 +148,29 @@ abstract contract wfCashBase is ERC777Upgradeable, IWrappedfCash {
         }
         isETH = address(token) == Constants.ETH_ADDRESS;
     }
+
+    /// @dev Internal method with more flags required for use inside mint internal
+    function _getTokenForMintInternal(bool useUnderlying) internal view returns (
+        IERC20 token, bool isETH, bool hasTransferFee, bool isNonMintable
+    ) {
+        (Token memory asset, Token memory underlying) = NotionalV2.getCurrency(getCurrencyId());
+
+        isNonMintable = asset.tokenType == TokenType.NonMintable;
+        if (isNonMintable || !useUnderlying) {
+            token = IERC20(asset.tokenAddress);
+            hasTransferFee = asset.hasTransferFee;
+        } else if (useUnderlying) {
+            token = IERC20(underlying.tokenAddress);
+            hasTransferFee = underlying.hasTransferFee;
+        }
+
+        isETH = address(token) == Constants.ETH_ADDRESS;
+    }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[45] private __gap;
 }
