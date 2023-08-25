@@ -28,7 +28,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         address receiver,
         uint32 minImpliedRate
     ) external override {
-        _mintInternal(depositAmountExternal, fCashAmount, receiver, minImpliedRate, false);
+        revert("Deprecated");
     }
 
     /// @notice Lends deposit amount in return for fCashAmount using underlying tokens
@@ -57,7 +57,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         // In this case, the asset token == the underlying token and we should just rewrite the useUnderlying
         // flag to false. The same amount of tokens will be transferred in either case so this method will behave
         // just like it has asset tokens.
-        if (isNonMintable) useUnderlying = false;
+        if (isNonMintable) revert();
         uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
         uint256 msgValue;
 
@@ -175,16 +175,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         address receiver,
         uint32 maxImpliedRate
     ) external override {
-        _burnInternal(
-            msg.sender,
-            amount,
-            RedeemOpts({
-                redeemToUnderlying: false,
-                transferfCash: false,
-                receiver: receiver,
-                maxImpliedRate: maxImpliedRate
-            })
-        );
+        revert("Deprecated");
     }
 
     /// @notice Redeems tokens to underlying
