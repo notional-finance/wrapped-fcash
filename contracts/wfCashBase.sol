@@ -149,9 +149,38 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         isETH = address(token) == Constants.ETH_ADDRESS;
     }
 
+    // function getTotalFCashAvailable() {
+
+    // }
+
     function getBalances() public view returns (int256 cashBalance, uint256 fCashBalance) {
         (cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(getCurrencyId(), address(this));
         fCashBalance = NotionalV2.balanceOf(address(this), _fCashId);
+    }
+
+    function getPresentCashValue(uint256 fCashAmount) internal view returns (
+        uint256 primeCashValue,
+        uint256 pvExternalUnderlying
+    ) {
+        if (hasMatured()) return (0, 0);
+        (/* */, int256 precision) = getUnderlyingToken();
+
+        // Get the present value of the fCash held by the contract, this is returned in 8 decimal precision
+        (uint16 currencyId, uint40 maturity) = getDecodedID();
+        int256 pvInternal = NotionalV2.getPresentfCashValue(
+            currencyId,
+            maturity,
+            int256(fCashAmount),
+            block.timestamp,
+            false
+        );
+        int256 pvExternal = pvInternal * precision / Constants.INTERNAL_TOKEN_PRECISION;
+        require(pvExternal >= 0);
+        int256 cashValue = NotionalV2.convertUnderlyingToPrimeCash(currencyId, pvExternal);
+        require(cashValue >= 0);
+
+        primeCashValue = uint256(cashValue);
+        pvExternalUnderlying = uint256(pvExternal);
     }
 
     function getMaturedCashValue(uint256 fCashAmount) internal view returns (uint256) {

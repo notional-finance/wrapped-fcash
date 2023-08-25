@@ -300,16 +300,32 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     ) private returns (uint256 tokensTransferred) {
         (IERC20 token, bool isETH) = getToken(toUnderlying);
         uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
+        uint16 currencyId = getCurrencyId();
 
-        // Sells fCash on Notional AMM (via borrowing)
-        BalanceActionWithTrades[] memory action = EncodeDecode.encodeBorrowTrade(
-            getCurrencyId(),
-            getMarketIndex(),
-            _safeUint88(fCashToSell),
-            maxImpliedRate,
-            toUnderlying
-        );
-        NotionalV2.batchBalanceAndTradeAction(address(this), action);
+        (int256 cashBalance, uint256 fCashBalance) = getBalances();
+        uint256 primeCashToWithdraw;
+        if (fCashBalance < fCashToSell) {
+            (primeCashToWithdraw, /* */) = getPresentCashValue(fCashToSell - fCashBalance);
+            require(0 < cashBalance);
+            require(primeCashToWithdraw <= uint256(cashBalance));
+            fCashToSell = fCashBalance;
+        }
+
+        if (fCashToSell > 0) {
+            // Sells fCash on Notional AMM (via borrowing)
+            BalanceActionWithTrades[] memory action = EncodeDecode.encodeBorrowTrade(
+                currencyId,
+                getMarketIndex(),
+                _safeUint88(fCashToSell),
+                maxImpliedRate,
+                toUnderlying
+            );
+            NotionalV2.batchBalanceAndTradeAction(address(this), action);
+        }
+
+        if (primeCashToWithdraw > 0) {
+            NotionalV2.withdraw(currencyId, _safeUint88(primeCashToWithdraw), true);
+        }
 
         // Send borrowed cash back to receiver
         tokensTransferred = _sendTokensToReceiver(token, receiver, isETH, balanceBefore);

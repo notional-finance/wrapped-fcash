@@ -88,6 +88,11 @@ interface INotionalV2 {
         bool useUnderlying
     ) external view returns (int256);
 
+    function convertUnderlyingToPrimeCash(
+        uint16 currencyId,
+        int256 underlyingExternal
+    ) external view returns (int256);
+
     function getPresentfCashValue(
         uint16 currencyId,
         uint256 maturity,

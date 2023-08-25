@@ -13,33 +13,18 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         return isETH ? address(WETH) : address(underlyingToken);
     }
 
-    function _getPresentValue(uint256 fCashAmount) private view returns (uint256) {
-        (/* */, int256 precision) = getUnderlyingToken();
-        // Get the present value of the fCash held by the contract, this is returned in 8 decimal precision
-        (uint16 currencyId, uint40 maturity) = getDecodedID();
-        int256 pvInternal = NotionalV2.getPresentfCashValue(
-            currencyId,
-            maturity,
-            int256(fCashAmount), // total supply cannot overflow as fCash overflows at uint88
-            block.timestamp,
-            false
-        );
-
-        int256 pvExternal = (pvInternal * precision) / Constants.INTERNAL_TOKEN_PRECISION;
-        // PV should always be >= 0 since we are lending
-        require(pvExternal >= 0);
-        return uint256(pvExternal);
-    }
-
     /** @dev See {IERC4626-totalAssets} */
     function totalAssets() public view override returns (uint256) {
         if (hasMatured()) {
-            (/* */, int256 precision) = getUnderlyingToken();
-            require(precision > 0);
             uint256 primeCashValue = getMaturedCashValue(totalSupply());
-            return primeCashValue * uint256(precision) / uint256(Constants.INTERNAL_TOKEN_PRECISION);
+            require(primeCashValue < uint256(type(int256).max));
+            int256 externalValue = NotionalV2.convertCashBalanceToExternal(
+                getCurrencyId(), int256(primeCashValue), true
+            );
+            return externalValue >= 0 ? uint256(externalValue) : 0;
         } else {
-            return _getPresentValue(totalSupply());
+            (/* */, uint256 pvExternal) = getPresentCashValue(totalSupply());
+            return pvExternal;
         }
     }
 
@@ -48,7 +33,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         uint256 supply = totalSupply();
         if (supply == 0) {
             // Scales assets by the value of a single unit of fCash
-            uint256 unitfCashValue = _getPresentValue(uint256(Constants.INTERNAL_TOKEN_PRECISION));
+            (/* */, uint256 unitfCashValue) = getPresentCashValue(uint256(Constants.INTERNAL_TOKEN_PRECISION));
             return (assets * uint256(Constants.INTERNAL_TOKEN_PRECISION)) / unitfCashValue;
         }
 
@@ -60,10 +45,10 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         uint256 supply = totalSupply();
         if (supply == 0) {
             // Catch the edge case where totalSupply causes a divide by zero error
-            return _getPresentValue(shares);
+            (/* */, assets) = getPresentCashValue(shares);
+        } else {
+            assets = (shares * totalAssets()) / supply;
         }
-
-        return (shares * totalAssets()) / supply;
     }
 
     /** @dev See {IERC4626-maxDeposit} */
