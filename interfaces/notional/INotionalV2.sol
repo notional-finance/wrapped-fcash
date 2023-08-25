@@ -25,6 +25,11 @@ interface INotionalV2 {
             uint256 lastClaimTime
         );
 
+    function getSettlementRate(uint16 currencyId, uint40 maturity)
+        external
+        view
+        returns (PrimeRate memory);
+
    function getfCashLendFromDeposit(
         uint16 currencyId,
         uint256 depositAmountExternal,
@@ -106,6 +111,8 @@ interface INotionalV2 {
         uint88 amountInternalPrecision,
         bool redeemToUnderlying
     ) external returns (uint256);
+
+    function getActiveMarkets(uint16 currencyId) external view returns (MarketParameters[] memory);
 
     function batchBalanceAndTradeAction(address account, BalanceActionWithTrades[] calldata actions)
         external

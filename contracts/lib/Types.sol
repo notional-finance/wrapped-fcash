@@ -163,12 +163,27 @@ struct AccountBalance {
     uint256 lastClaimIntegralSupply;
 }
 
-/// @dev Asset rate used to convert between underlying cash and asset cash
-struct AssetRateParameters {
-    // Address of the asset rate oracle
-    address rateOracle;
-    // The exchange rate from base to quote (if invert is required it is already done)
-    int256 rate;
-    // The decimals of the underlying, the rate converts to the underlying decimals
-    int256 underlyingDecimals;
+struct PrimeRate {
+    int256 supplyFactor;
+    int256 debtFactor;
+    uint256 oracleSupplyRate;
+}
+
+struct MarketParameters {
+    bytes32 storageSlot;
+    uint256 maturity;
+    // Total amount of fCash available for purchase in the market.
+    int256 totalfCash;
+    // Total amount of cash available for purchase in the market.
+    int256 totalPrimeCash;
+    // Total amount of liquidity tokens (representing a claim on liquidity) in the market.
+    int256 totalLiquidity;
+    // This is the previous annualized interest rate in RATE_PRECISION that the market traded
+    // at. This is used to calculate the rate anchor to smooth interest rates over time.
+    uint256 lastImpliedRate;
+    // Time lagged version of lastImpliedRate, used to value fCash assets at market rates while
+    // remaining resistent to flash loan attacks.
+    uint256 oracleRate;
+    // This is the timestamp of the previous trade
+    uint256 previousTradeTime;
 }
