@@ -13,18 +13,6 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         return isETH ? address(WETH) : address(underlyingToken);
     }
 
-    function _getMaturedValue() private view returns (uint256) {
-        // If the fCash has matured we use the cash balance instead.
-        uint16 currencyId = getCurrencyId();
-        // We cannot settle an account in a view method, so this may fail if the account has not been settled
-        // after maturity. This can be done by anyone so it should not be an issue
-        (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
-        int256 underlyingExternal = NotionalV2.convertCashBalanceToExternal(currencyId, cashBalance, true);
-        require(underlyingExternal > 0, "Must Settle");
-
-        return uint256(underlyingExternal);
-    }
-
     function _getPresentValue(uint256 fCashAmount) private view returns (uint256) {
         (/* */, int256 precision) = getUnderlyingToken();
         // Get the present value of the fCash held by the contract, this is returned in 8 decimal precision
@@ -45,7 +33,14 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4626-totalAssets} */
     function totalAssets() public view override returns (uint256) {
-        return hasMatured() ?  _getMaturedValue() : _getPresentValue(totalSupply());
+        if (hasMatured()) {
+            (/* */, int256 precision) = getUnderlyingToken();
+            require(precision > 0);
+            uint256 primeCashValue = getMaturedCashValue(totalSupply());
+            return primeCashValue * uint256(precision) / uint256(Constants.INTERNAL_TOKEN_PRECISION);
+        } else {
+            return _getPresentValue(totalSupply());
+        }
     }
 
     /** @dev See {IERC4626-convertToShares} */

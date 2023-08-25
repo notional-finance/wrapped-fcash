@@ -149,6 +149,24 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         isETH = address(token) == Constants.ETH_ADDRESS;
     }
 
+    function getBalances() public view returns (int256 cashBalance, uint256 fCashBalance) {
+        (cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(getCurrencyId(), address(this));
+        fCashBalance = NotionalV2.balanceOf(address(this), _fCashId);
+    }
+
+    function getMaturedCashValue(uint256 fCashAmount) internal view returns (uint256) {
+        if (!hasMatured()) return 0;
+        // If the fCash has matured we use the cash balance instead.
+        (uint16 currencyId, uint40 maturity) = getDecodedID();
+        PrimeRate memory pr = NotionalV2.getSettlementRate(currencyId, maturity);
+
+        // fCash has not yet been settled
+        if (pr.supplyFactor == 0) return 0;
+        require(pr.supplyFactor > 0);
+
+        return fCashAmount * uint256(pr.supplyFactor) / Constants.DOUBLE_SCALAR_PRECISION;
+    }
+
     /// @dev Internal method with more flags required for use inside mint internal
     function _getTokenForMintInternal(bool useUnderlying) internal view returns (
         IERC20 token, bool isETH, bool hasTransferFee, bool isNonMintable

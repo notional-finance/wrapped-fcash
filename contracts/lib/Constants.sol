@@ -9,6 +9,7 @@ library Constants {
     // limit the dust amount caused by precision mismatches
     uint8 internal constant INTERNAL_TOKEN_DECIMALS = 8;
     int256 internal constant INTERNAL_TOKEN_PRECISION = 1e8;
+    uint256 internal constant DOUBLE_SCALAR_PRECISION = 1e36;
 
     // Max number of traded markets, also used as the maximum number of assets in a portfolio array
     uint256 internal constant MAX_TRADED_MARKET_INDEX = 7;

@@ -245,18 +245,13 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
             // cache it in storage locally
             NotionalV2.settleAccount(address(this));
             uint16 currencyId = getCurrencyId();
-
-            (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
-            require(0 < cashBalance, "Negative Cash Balance");
-
-            // This always rounds down in favor of the wrapped fCash contract.
-            uint256 assetInternalCashClaim = (uint256(cashBalance) * amount) / initialTotalSupply;
+            uint256 primeCashClaim = getMaturedCashValue(amount);
 
             // Transfer withdrawn tokens to the `from` address
             _withdrawCashToAccount(
                 currencyId,
                 opts.receiver,
-                _safeUint88(assetInternalCashClaim),
+                _safeUint88(primeCashClaim),
                 opts.redeemToUnderlying
             );
         } else if (opts.transferfCash) {
