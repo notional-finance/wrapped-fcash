@@ -117,6 +117,12 @@ interface INotionalV2 {
         bool redeemToUnderlying
     ) external returns (uint256);
 
+    function depositUnderlyingToken(
+        address account,
+        uint16 currencyId,
+        uint256 amountExternalPrecision
+    ) external payable returns (uint256);
+
     function getActiveMarkets(uint16 currencyId) external view returns (MarketParameters[] memory);
 
     function batchBalanceAndTradeAction(address account, BalanceActionWithTrades[] calldata actions)

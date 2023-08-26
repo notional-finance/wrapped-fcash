@@ -59,14 +59,21 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
         uint256 msgValue;
 
-        // If dealing in ETH, we use WETH in the wrapper instead of ETH. NotionalV2 uses
-        // ETH natively but due to pull payment requirements for batchLend, it does not support
-        // ETH. batchLend only supports ERC20 tokens like cETH or aETH. Since the wrapper is a compatibility
-        // layer, it will support WETH so integrators can deal solely in ERC20 tokens. Instead of using
-        // "batchLend" we will use "batchBalanceActionWithTrades". The difference is that "batchLend"
-        // is more gas efficient (does not require an additional redeem call to asset tokens). If using cETH
-        // then everything will proceed via batchLend. Similar logic applies to tokens with transfer fees
-        if (isETH || hasTransferFee) {
+        uint256 totalfCash = getTotalFCashAvailable();
+        if (totalfCash <= fCashAmount) {
+            // NOTE: lending at zero
+            uint256 fCashAmountExternal = fCashAmount * precision / uint256(Constants.INTERNAL_TOKEN_PRECISION);
+            require(fCashAmountExternal <= depositAmountExternal);
+
+            NotionalV2.depositUnderlyingToken(address(this), getCurrencyId(), fCashAmountExternal);
+        } else if (isETH || hasTransferFee) {
+            // If dealing in ETH, we use WETH in the wrapper instead of ETH. NotionalV2 uses
+            // ETH natively but due to pull payment requirements for batchLend, it does not support
+            // ETH. batchLend only supports ERC20 tokens like cETH or aETH. Since the wrapper is a compatibility
+            // layer, it will support WETH so integrators can deal solely in ERC20 tokens. Instead of using
+            // "batchLend" we will use "batchBalanceActionWithTrades". The difference is that "batchLend"
+            // is more gas efficient (does not require an additional redeem call to asset tokens). If using cETH
+            // then everything will proceed via batchLend. Similar logic applies to tokens with transfer fees
             if (isETH) {
                 // safeTransferFrom not required since WETH is known to be compatible
                 IERC20((address(WETH))).transferFrom(msg.sender, address(this), depositAmountExternal);

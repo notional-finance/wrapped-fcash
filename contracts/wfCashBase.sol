@@ -149,9 +149,17 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         isETH = address(token) == Constants.ETH_ADDRESS;
     }
 
-    // function getTotalFCashAvailable() {
+    function getTotalFCashAvailable() public view returns (uint256) {
+        uint8 marketIndex = getMarketIndex();
+        if (marketIndex == 0) return 0;
+        MarketParameters[] memory markets = NotionalV2.getActiveMarkets(getCurrencyId());
+        require(markets.length <= marketIndex);
 
-    // }
+        int256 totalfCash = markets[marketIndex - 1].totalfCash;
+        require(totalfCash > 0);
+
+        return uint256(totalfCash);
+    }
 
     function getBalances() public view returns (int256 cashBalance, uint256 fCashBalance) {
         (cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(getCurrencyId(), address(this));
@@ -197,21 +205,16 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
     }
 
     /// @dev Internal method with more flags required for use inside mint internal
-    function _getTokenForMintInternal(bool useUnderlying) internal view returns (
-        IERC20 token, bool isETH, bool hasTransferFee, bool isNonMintable
+    function _getTokenForMintInternal() internal view returns (
+        IERC20 token, bool isETH, bool hasTransferFee, uint256 precision
     ) {
-        (Token memory asset, Token memory underlying) = NotionalV2.getCurrency(getCurrencyId());
-
-        isNonMintable = asset.tokenType == TokenType.NonMintable;
-        if (isNonMintable || !useUnderlying) {
-            token = IERC20(asset.tokenAddress);
-            hasTransferFee = asset.hasTransferFee;
-        } else if (useUnderlying) {
-            token = IERC20(underlying.tokenAddress);
-            hasTransferFee = underlying.hasTransferFee;
-        }
-
+        (/* */, Token memory underlying) = NotionalV2.getCurrency(getCurrencyId());
+        token = IERC20(underlying.tokenAddress);
+        hasTransferFee = underlying.hasTransferFee;
         isETH = address(token) == Constants.ETH_ADDRESS;
+
+        require(underlying.decimals > 0);
+        precision = uint256(underlying.decimals);
     }
 
     /**
