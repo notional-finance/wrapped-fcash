@@ -158,7 +158,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     function deposit(uint256 assets, address receiver) external override returns (uint256) {
         uint256 shares = previewDeposit(assets);
         // Will revert if matured
-        _mintInternal(assets, _safeUint88(shares), receiver, 0, true);
+        _mintInternal(assets, _safeUint88(shares), receiver, 0);
         emit Deposit(msg.sender, receiver, assets, shares);
         return shares;
     }
@@ -167,7 +167,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     function mint(uint256 shares, address receiver) external override returns (uint256) {
         uint256 assets = previewMint(shares);
         // Will revert if matured
-        _mintInternal(assets, _safeUint88(shares), receiver, 0, true);
+        _mintInternal(assets, _safeUint88(shares), receiver, 0);
         emit Deposit(msg.sender, receiver, assets, shares);
         return assets;
     }

@@ -42,22 +42,20 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         address receiver,
         uint32 minImpliedRate
     ) external override {
-        _mintInternal(depositAmountExternal, fCashAmount, receiver, minImpliedRate, true);
+        _mintInternal(depositAmountExternal, fCashAmount, receiver, minImpliedRate);
     }
 
     function _mintInternal(
         uint256 depositAmountExternal,
         uint88 fCashAmount,
         address receiver,
-        uint32 minImpliedRate,
-        bool useUnderlying
+        uint32 minImpliedRate
     ) internal nonReentrant {
         require(!hasMatured(), "fCash matured");
-        (IERC20 token, bool isETH, bool hasTransferFee, bool isNonMintable) = _getTokenForMintInternal(useUnderlying);
+        (IERC20 token, bool isETH, bool hasTransferFee, uint256 precision) = _getTokenForMintInternal();
         // In this case, the asset token == the underlying token and we should just rewrite the useUnderlying
         // flag to false. The same amount of tokens will be transferred in either case so this method will behave
         // just like it has asset tokens.
-        if (isNonMintable) revert();
         uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
         uint256 msgValue;
 
@@ -84,9 +82,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 getMarketIndex(),
                 depositAmountExternal,
                 fCashAmount,
-                minImpliedRate,
-                useUnderlying,
-                isNonMintable
+                minImpliedRate
             );
             // Notional will return any residual ETH as the native token. When we _sendTokensToReceiver those
             // native ETH tokens will be wrapped back to WETH.
@@ -100,8 +96,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 getCurrencyId(),
                 getMarketIndex(),
                 fCashAmount,
-                minImpliedRate,
-                useUnderlying
+                minImpliedRate
             );
             NotionalV2.batchLend(address(this), action);
         }
@@ -226,16 +221,10 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         // Save the total supply value before burning to calculate the cash claim share
         uint256 initialTotalSupply = totalSupply();
         require(opts.receiver != address(0), "Receiver is zero address");
+        require(opts.redeemToUnderlying);
         // This will validate that the account has sufficient tokens to burn and make
         // any relevant underlying stateful changes to balances.
         super._burn(from, amount);
-
-        if (opts.redeemToUnderlying) {
-            // Check if the token type is non-mintable, in this case we cannot redeem to underlying
-            // so we have to rewrite the variable
-            (/* */, /* */, TokenType tokenType) = getAssetToken();
-            if (tokenType == TokenType.NonMintable) opts.redeemToUnderlying = false;
-        }
 
         if (hasMatured()) {
             // If the fCash has matured, then we need to ensure that the account is settled
@@ -248,12 +237,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
             uint256 primeCashClaim = getMaturedCashValue(amount);
 
             // Transfer withdrawn tokens to the `from` address
-            _withdrawCashToAccount(
-                currencyId,
-                opts.receiver,
-                _safeUint88(primeCashClaim),
-                opts.redeemToUnderlying
-            );
+            _withdrawCashToAccount(currencyId, opts.receiver, _safeUint88(primeCashClaim));
         } else if (opts.transferfCash) {
             // If the fCash has not matured, then we can transfer it via ERC1155.
             // NOTE: this may fail if the destination is a contract and it does not implement 
@@ -267,12 +251,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 ""
             );
         } else {
-            _sellfCash(
-                opts.receiver,
-                amount,
-                opts.redeemToUnderlying,
-                opts.maxImpliedRate
-            );
+            _sellfCash(opts.receiver, amount, opts.maxImpliedRate);
         }
     }
 
@@ -280,13 +259,12 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     function _withdrawCashToAccount(
         uint16 currencyId,
         address receiver,
-        uint88 assetInternalCashClaim,
-        bool toUnderlying
+        uint88 assetInternalCashClaim
     ) private returns (uint256 tokensTransferred) {
-        (IERC20 token, bool isETH) = getToken(toUnderlying);
+        (IERC20 token, bool isETH) = getToken(true);
         uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
 
-        NotionalV2.withdraw(currencyId, assetInternalCashClaim, toUnderlying);
+        NotionalV2.withdraw(currencyId, assetInternalCashClaim, true);
 
         tokensTransferred = _sendTokensToReceiver(token, receiver, isETH, balanceBefore);
     }
@@ -295,10 +273,9 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     function _sellfCash(
         address receiver,
         uint256 fCashToSell,
-        bool toUnderlying,
         uint32 maxImpliedRate
     ) private returns (uint256 tokensTransferred) {
-        (IERC20 token, bool isETH) = getToken(toUnderlying);
+        (IERC20 token, bool isETH) = getToken(true);
         uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
         uint16 currencyId = getCurrencyId();
 
@@ -317,8 +294,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 currencyId,
                 getMarketIndex(),
                 _safeUint88(fCashToSell),
-                maxImpliedRate,
-                toUnderlying
+                maxImpliedRate
             );
             NotionalV2.batchBalanceAndTradeAction(address(this), action);
         }
