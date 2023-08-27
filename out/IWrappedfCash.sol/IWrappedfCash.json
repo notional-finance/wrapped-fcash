@@ -1,0 +1,2315 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "name": "getAssetToken",
+      "outputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "assetToken",
+          "type": "address"
+        },
+        {
+          "internalType": "int256",
+          "name": "assetPrecision",
+          "type": "int256"
+        },
+        {
+          "internalType": "enum TokenType",
+          "name": "tokenType",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getCurrencyId",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "currencyId",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getDecodedID",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "currencyId",
+          "type": "uint16"
+        },
+        {
+          "internalType": "uint40",
+          "name": "maturity",
+          "type": "uint40"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getMarketIndex",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getMaturity",
+      "outputs": [
+        {
+          "internalType": "uint40",
+          "name": "maturity",
+          "type": "uint40"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getUnderlyingToken",
+      "outputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "underlyingToken",
+          "type": "address"
+        },
+        {
+          "internalType": "int256",
+          "name": "underlyingPrecision",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getfCashId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "hasMatured",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint16",
+          "name": "currencyId",
+          "type": "uint16"
+        },
+        {
+          "internalType": "uint40",
+          "name": "maturity",
+          "type": "uint40"
+        }
+      ],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "depositAmountExternal",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint88",
+          "name": "fCashAmount",
+          "type": "uint88"
+        },
+        {
+          "internalType": "address",
+          "name": "receiver",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "minImpliedRate",
+          "type": "uint32"
+        }
+      ],
+      "name": "mintViaAsset",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "depositAmountExternal",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint88",
+          "name": "fCashAmount",
+          "type": "uint88"
+        },
+        {
+          "internalType": "address",
+          "name": "receiver",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "minImpliedRate",
+          "type": "uint32"
+        }
+      ],
+      "name": "mintViaUnderlying",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "bool",
+              "name": "redeemToUnderlying",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "transferfCash",
+              "type": "bool"
+            },
+            {
+              "internalType": "address",
+              "name": "receiver",
+              "type": "address"
+            },
+            {
+              "internalType": "uint32",
+              "name": "maxImpliedRate",
+              "type": "uint32"
+            }
+          ],
+          "internalType": "struct IWrappedfCash.RedeemOpts",
+          "name": "data",
+          "type": "tuple"
+        }
+      ],
+      "name": "redeem",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "receiver",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "maxImpliedRate",
+          "type": "uint32"
+        }
+      ],
+      "name": "redeemToAsset",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "receiver",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "maxImpliedRate",
+          "type": "uint32"
+        }
+      ],
+      "name": "redeemToUnderlying",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "getAssetToken()": "f8eef10f",
+    "getCurrencyId()": "cf387fed",
+    "getDecodedID()": "48d8f98d",
+    "getMarketIndex()": "cb803ceb",
+    "getMaturity()": "e16695b5",
+    "getUnderlyingToken()": "ee719bc8",
+    "getfCashId()": "0558d500",
+    "hasMatured()": "a1093295",
+    "initialize(uint16,uint40)": "152b838c",
+    "mintViaAsset(uint256,uint88,address,uint32)": "0db8481c",
+    "mintViaUnderlying(uint256,uint88,address,uint32)": "29cf1405",
+    "redeem(uint256,(bool,bool,address,uint32))": "d84878b8",
+    "redeemToAsset(uint256,address,uint32)": "3d3192cb",
+    "redeemToUnderlying(uint256,address,uint32)": "745d08d9"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.15+commit.e14f2714\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"getAssetToken\",\"outputs\":[{\"internalType\":\"contract IERC20\",\"name\":\"assetToken\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"assetPrecision\",\"type\":\"int256\"},{\"internalType\":\"enum TokenType\",\"name\":\"tokenType\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCurrencyId\",\"outputs\":[{\"internalType\":\"uint16\",\"name\":\"currencyId\",\"type\":\"uint16\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getDecodedID\",\"outputs\":[{\"internalType\":\"uint16\",\"name\":\"currencyId\",\"type\":\"uint16\"},{\"internalType\":\"uint40\",\"name\":\"maturity\",\"type\":\"uint40\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getMarketIndex\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getMaturity\",\"outputs\":[{\"internalType\":\"uint40\",\"name\":\"maturity\",\"type\":\"uint40\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getUnderlyingToken\",\"outputs\":[{\"internalType\":\"contract IERC20\",\"name\":\"underlyingToken\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"underlyingPrecision\",\"type\":\"int256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getfCashId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hasMatured\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"currencyId\",\"type\":\"uint16\"},{\"internalType\":\"uint40\",\"name\":\"maturity\",\"type\":\"uint40\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"depositAmountExternal\",\"type\":\"uint256\"},{\"internalType\":\"uint88\",\"name\":\"fCashAmount\",\"type\":\"uint88\"},{\"internalType\":\"address\",\"name\":\"receiver\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"minImpliedRate\",\"type\":\"uint32\"}],\"name\":\"mintViaAsset\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"depositAmountExternal\",\"type\":\"uint256\"},{\"internalType\":\"uint88\",\"name\":\"fCashAmount\",\"type\":\"uint88\"},{\"internalType\":\"address\",\"name\":\"receiver\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"minImpliedRate\",\"type\":\"uint32\"}],\"name\":\"mintViaUnderlying\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bool\",\"name\":\"redeemToUnderlying\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"transferfCash\",\"type\":\"bool\"},{\"internalType\":\"address\",\"name\":\"receiver\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"maxImpliedRate\",\"type\":\"uint32\"}],\"internalType\":\"struct IWrappedfCash.RedeemOpts\",\"name\":\"data\",\"type\":\"tuple\"}],\"name\":\"redeem\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"receiver\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"maxImpliedRate\",\"type\":\"uint32\"}],\"name\":\"redeemToAsset\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"receiver\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"maxImpliedRate\",\"type\":\"uint32\"}],\"name\":\"redeemToUnderlying\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"getAssetToken()\":{\"notice\":\"Returns the asset token which the fCash settles to. This will be an interest bearing token like a cToken or aToken.\"},\"getCurrencyId()\":{\"notice\":\"Returns the underlying fCash currency\"},\"getDecodedID()\":{\"notice\":\"Returns the components of the fCash idd\"},\"getMarketIndex()\":{\"notice\":\"Returns the current market index for this fCash asset. If this returns zero that means it is idiosyncratic and cannot be traded.\"},\"getMaturity()\":{\"notice\":\"Returns the underlying fCash maturity of the token\"},\"getUnderlyingToken()\":{\"notice\":\"Returns the token and precision of the token that this token settles to. For example, fUSDC will return the USDC token address and 1e6. The zero address will represent ETH.\"},\"getfCashId()\":{\"notice\":\"Returns the underlying fCash ID of the token\"},\"hasMatured()\":{\"notice\":\"True if the fCash has matured, assets mature exactly on the block time\"},\"mintViaAsset(uint256,uint88,address,uint32)\":{\"notice\":\"Mints wrapped fCash ERC20 tokens\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"interfaces/notional/IWrappedfCash.sol\":\"IWrappedfCash\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/\",\":@openzeppelin/=lib/openzeppelin-contracts/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":forge-std/=lib/forge-std/src/\",\":openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/\"]},\"sources\":{\"contracts/lib/Types.sol\":{\"keccak256\":\"0x5a700d01b82ac7cfd70d9061c3a52ed3ba1d44559f31c3d7e048548195f8dc94\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://e4ae97295832a17379bc4a0eb7120c44f58458a23f4ff3bf09ab8e2b8973dab3\",\"dweb:/ipfs/QmTppm3bA3FCpiBZ1npf2k4145WiCpxHDyjbS4zj3zjzgT\"]},\"interfaces/IERC4626.sol\":{\"keccak256\":\"0xe66cd004dc587705cacc1a8e20c59d97dbb0f26acc6207742e17c2d3435a184f\",\"urls\":[\"bzz-raw://bd81f3a97c645e61b701010410b86158562b0ce85940f7efee3fe837d202079a\",\"dweb:/ipfs/QmPDcbo4ymiEmtciRRakUkHmrtMfsiWZw338CRyzgVWzRM\"]},\"interfaces/notional/IWrappedfCash.sol\":{\"keccak256\":\"0xbe279a5b874747928a6fdc708027af29d5e2463084dfcda67e6fea8f03f96392\",\"license\":\"GPL-3.0-only\",\"urls\":[\"bzz-raw://9a9e5f57c3b6670ce209c9b516833842afc2076afd322b5697bc126f545b1295\",\"dweb:/ipfs/QmVVhvKbD8dx1Ef8CevJQC7ZGYNYAmQK6YJAbvoHcpy5bG\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0xbbc8ac883ac3c0078ce5ad3e288fbb3ffcc8a30c3a98c0fda0114d64fc44fca2\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://87a7a5d2f6f63f84598af02b8c50ca2df2631cb8ba2453e8d95fcb17e4be9824\",\"dweb:/ipfs/QmR76hqtAcRqoFj33tmNjcWTLrgNsAaakYwnKZ8zoJtKei\"]},\"lib/openzeppelin-contracts/contracts/token/ERC777/IERC777.sol\":{\"keccak256\":\"0xe4e0b7e3f0265ffaa565d26acd2d45f2633f19127ed625e5a05a9f201a87a667\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://1762b5bc15a009b5f092ccf547b81e0827c8705884f18e0623e497658514a7ed\",\"dweb:/ipfs/QmTtmVQYuynan3j2uVjdjjRJS1mr7LPRgxSZNnfqC7oxkz\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.15+commit.e14f2714"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getAssetToken",
+          "outputs": [
+            {
+              "internalType": "contract IERC20",
+              "name": "assetToken",
+              "type": "address"
+            },
+            {
+              "internalType": "int256",
+              "name": "assetPrecision",
+              "type": "int256"
+            },
+            {
+              "internalType": "enum TokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getCurrencyId",
+          "outputs": [
+            {
+              "internalType": "uint16",
+              "name": "currencyId",
+              "type": "uint16"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getDecodedID",
+          "outputs": [
+            {
+              "internalType": "uint16",
+              "name": "currencyId",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint40",
+              "name": "maturity",
+              "type": "uint40"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getMarketIndex",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getMaturity",
+          "outputs": [
+            {
+              "internalType": "uint40",
+              "name": "maturity",
+              "type": "uint40"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getUnderlyingToken",
+          "outputs": [
+            {
+              "internalType": "contract IERC20",
+              "name": "underlyingToken",
+              "type": "address"
+            },
+            {
+              "internalType": "int256",
+              "name": "underlyingPrecision",
+              "type": "int256"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getfCashId",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "hasMatured",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint16",
+              "name": "currencyId",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint40",
+              "name": "maturity",
+              "type": "uint40"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "initialize"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "depositAmountExternal",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint88",
+              "name": "fCashAmount",
+              "type": "uint88"
+            },
+            {
+              "internalType": "address",
+              "name": "receiver",
+              "type": "address"
+            },
+            {
+              "internalType": "uint32",
+              "name": "minImpliedRate",
+              "type": "uint32"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "mintViaAsset"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "depositAmountExternal",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint88",
+              "name": "fCashAmount",
+              "type": "uint88"
+            },
+            {
+              "internalType": "address",
+              "name": "receiver",
+              "type": "address"
+            },
+            {
+              "internalType": "uint32",
+              "name": "minImpliedRate",
+              "type": "uint32"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "mintViaUnderlying"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "struct IWrappedfCash.RedeemOpts",
+              "name": "data",
+              "type": "tuple",
+              "components": [
+                {
+                  "internalType": "bool",
+                  "name": "redeemToUnderlying",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "transferfCash",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "address",
+                  "name": "receiver",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint32",
+                  "name": "maxImpliedRate",
+                  "type": "uint32"
+                }
+              ]
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "redeem"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "receiver",
+              "type": "address"
+            },
+            {
+              "internalType": "uint32",
+              "name": "maxImpliedRate",
+              "type": "uint32"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "redeemToAsset"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "receiver",
+              "type": "address"
+            },
+            {
+              "internalType": "uint32",
+              "name": "maxImpliedRate",
+              "type": "uint32"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "redeemToUnderlying"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {
+          "getAssetToken()": {
+            "notice": "Returns the asset token which the fCash settles to. This will be an interest bearing token like a cToken or aToken."
+          },
+          "getCurrencyId()": {
+            "notice": "Returns the underlying fCash currency"
+          },
+          "getDecodedID()": {
+            "notice": "Returns the components of the fCash idd"
+          },
+          "getMarketIndex()": {
+            "notice": "Returns the current market index for this fCash asset. If this returns zero that means it is idiosyncratic and cannot be traded."
+          },
+          "getMaturity()": {
+            "notice": "Returns the underlying fCash maturity of the token"
+          },
+          "getUnderlyingToken()": {
+            "notice": "Returns the token and precision of the token that this token settles to. For example, fUSDC will return the USDC token address and 1e6. The zero address will represent ETH."
+          },
+          "getfCashId()": {
+            "notice": "Returns the underlying fCash ID of the token"
+          },
+          "hasMatured()": {
+            "notice": "True if the fCash has matured, assets mature exactly on the block time"
+          },
+          "mintViaAsset(uint256,uint88,address,uint32)": {
+            "notice": "Mints wrapped fCash ERC20 tokens"
+          }
+        },
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/",
+        "@openzeppelin/=lib/openzeppelin-contracts/",
+        "ds-test/=lib/forge-std/lib/ds-test/src/",
+        "forge-std/=lib/forge-std/src/",
+        "openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/",
+        "openzeppelin-contracts/=lib/openzeppelin-contracts/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "interfaces/notional/IWrappedfCash.sol": "IWrappedfCash"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/lib/Types.sol": {
+        "keccak256": "0x5a700d01b82ac7cfd70d9061c3a52ed3ba1d44559f31c3d7e048548195f8dc94",
+        "urls": [
+          "bzz-raw://e4ae97295832a17379bc4a0eb7120c44f58458a23f4ff3bf09ab8e2b8973dab3",
+          "dweb:/ipfs/QmTppm3bA3FCpiBZ1npf2k4145WiCpxHDyjbS4zj3zjzgT"
+        ],
+        "license": "MIT"
+      },
+      "interfaces/IERC4626.sol": {
+        "keccak256": "0xe66cd004dc587705cacc1a8e20c59d97dbb0f26acc6207742e17c2d3435a184f",
+        "urls": [
+          "bzz-raw://bd81f3a97c645e61b701010410b86158562b0ce85940f7efee3fe837d202079a",
+          "dweb:/ipfs/QmPDcbo4ymiEmtciRRakUkHmrtMfsiWZw338CRyzgVWzRM"
+        ],
+        "license": null
+      },
+      "interfaces/notional/IWrappedfCash.sol": {
+        "keccak256": "0xbe279a5b874747928a6fdc708027af29d5e2463084dfcda67e6fea8f03f96392",
+        "urls": [
+          "bzz-raw://9a9e5f57c3b6670ce209c9b516833842afc2076afd322b5697bc126f545b1295",
+          "dweb:/ipfs/QmVVhvKbD8dx1Ef8CevJQC7ZGYNYAmQK6YJAbvoHcpy5bG"
+        ],
+        "license": "GPL-3.0-only"
+      },
+      "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol": {
+        "keccak256": "0xbbc8ac883ac3c0078ce5ad3e288fbb3ffcc8a30c3a98c0fda0114d64fc44fca2",
+        "urls": [
+          "bzz-raw://87a7a5d2f6f63f84598af02b8c50ca2df2631cb8ba2453e8d95fcb17e4be9824",
+          "dweb:/ipfs/QmR76hqtAcRqoFj33tmNjcWTLrgNsAaakYwnKZ8zoJtKei"
+        ],
+        "license": "MIT"
+      },
+      "lib/openzeppelin-contracts/contracts/token/ERC777/IERC777.sol": {
+        "keccak256": "0xe4e0b7e3f0265ffaa565d26acd2d45f2633f19127ed625e5a05a9f201a87a667",
+        "urls": [
+          "bzz-raw://1762b5bc15a009b5f092ccf547b81e0827c8705884f18e0623e497658514a7ed",
+          "dweb:/ipfs/QmTtmVQYuynan3j2uVjdjjRJS1mr7LPRgxSZNnfqC7oxkz"
+        ],
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "ast": {
+    "absolutePath": "interfaces/notional/IWrappedfCash.sol",
+    "id": 4846,
+    "exportedSymbols": {
+      "IERC20": [
+        6709
+      ],
+      "IERC4626": [
+        4423
+      ],
+      "IERC777": [
+        7117
+      ],
+      "IWrappedfCash": [
+        4838
+      ],
+      "IWrappedfCashComplete": [
+        4845
+      ],
+      "TokenType": [
+        974
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "41:2704:14",
+    "nodes": [
+      {
+        "id": 4708,
+        "nodeType": "PragmaDirective",
+        "src": "41:24:14",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          ">=",
+          "0.7",
+          ".6"
+        ]
+      },
+      {
+        "id": 4710,
+        "nodeType": "ImportDirective",
+        "src": "67:56:14",
+        "nodes": [],
+        "absolutePath": "contracts/lib/Types.sol",
+        "file": "../../contracts/lib/Types.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 4846,
+        "sourceUnit": 1116,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 4709,
+              "name": "TokenType",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 974,
+              "src": "75:9:14",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 4711,
+        "nodeType": "ImportDirective",
+        "src": "124:25:14",
+        "nodes": [],
+        "absolutePath": "interfaces/IERC4626.sol",
+        "file": "../IERC4626.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 4846,
+        "sourceUnit": 4424,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 4712,
+        "nodeType": "ImportDirective",
+        "src": "150:56:14",
+        "nodes": [],
+        "absolutePath": "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol",
+        "file": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 4846,
+        "sourceUnit": 6710,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 4713,
+        "nodeType": "ImportDirective",
+        "src": "207:58:14",
+        "nodes": [],
+        "absolutePath": "lib/openzeppelin-contracts/contracts/token/ERC777/IERC777.sol",
+        "file": "@openzeppelin/contracts/token/ERC777/IERC777.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 4846,
+        "sourceUnit": 7118,
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "id": 4838,
+        "nodeType": "ContractDefinition",
+        "src": "267:2404:14",
+        "nodes": [
+          {
+            "id": 4722,
+            "nodeType": "StructDefinition",
+            "src": "297:189:14",
+            "nodes": [],
+            "canonicalName": "IWrappedfCash.RedeemOpts",
+            "members": [
+              {
+                "constant": false,
+                "id": 4715,
+                "mutability": "mutable",
+                "name": "redeemToUnderlying",
+                "nameLocation": "330:18:14",
+                "nodeType": "VariableDeclaration",
+                "scope": 4722,
+                "src": "325:23:14",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_bool",
+                  "typeString": "bool"
+                },
+                "typeName": {
+                  "id": 4714,
+                  "name": "bool",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "325:4:14",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 4717,
+                "mutability": "mutable",
+                "name": "transferfCash",
+                "nameLocation": "363:13:14",
+                "nodeType": "VariableDeclaration",
+                "scope": 4722,
+                "src": "358:18:14",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_bool",
+                  "typeString": "bool"
+                },
+                "typeName": {
+                  "id": 4716,
+                  "name": "bool",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "358:4:14",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 4719,
+                "mutability": "mutable",
+                "name": "receiver",
+                "nameLocation": "394:8:14",
+                "nodeType": "VariableDeclaration",
+                "scope": 4722,
+                "src": "386:16:14",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_address",
+                  "typeString": "address"
+                },
+                "typeName": {
+                  "id": 4718,
+                  "name": "address",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "386:7:14",
+                  "stateMutability": "nonpayable",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 4721,
+                "mutability": "mutable",
+                "name": "maxImpliedRate",
+                "nameLocation": "465:14:14",
+                "nodeType": "VariableDeclaration",
+                "scope": 4722,
+                "src": "458:21:14",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint32",
+                  "typeString": "uint32"
+                },
+                "typeName": {
+                  "id": 4720,
+                  "name": "uint32",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "458:6:14",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint32",
+                    "typeString": "uint32"
+                  }
+                },
+                "visibility": "internal"
+              }
+            ],
+            "name": "RedeemOpts",
+            "nameLocation": "304:10:14",
+            "scope": 4838,
+            "visibility": "public"
+          },
+          {
+            "id": 4729,
+            "nodeType": "FunctionDefinition",
+            "src": "491:65:14",
+            "nodes": [],
+            "functionSelector": "152b838c",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "initialize",
+            "nameLocation": "500:10:14",
+            "parameters": {
+              "id": 4727,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4724,
+                  "mutability": "mutable",
+                  "name": "currencyId",
+                  "nameLocation": "518:10:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4729,
+                  "src": "511:17:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 4723,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "511:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4726,
+                  "mutability": "mutable",
+                  "name": "maturity",
+                  "nameLocation": "537:8:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4729,
+                  "src": "530:15:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint40",
+                    "typeString": "uint40"
+                  },
+                  "typeName": {
+                    "id": 4725,
+                    "name": "uint40",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "530:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint40",
+                      "typeString": "uint40"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "510:36:14"
+            },
+            "returnParameters": {
+              "id": 4728,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "555:0:14"
+            },
+            "scope": 4838,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4741,
+            "nodeType": "FunctionDefinition",
+            "src": "611:161:14",
+            "nodes": [],
+            "documentation": {
+              "id": 4730,
+              "nodeType": "StructuredDocumentation",
+              "src": "562:44:14",
+              "text": "@notice Mints wrapped fCash ERC20 tokens"
+            },
+            "functionSelector": "0db8481c",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "mintViaAsset",
+            "nameLocation": "620:12:14",
+            "parameters": {
+              "id": 4739,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4732,
+                  "mutability": "mutable",
+                  "name": "depositAmountExternal",
+                  "nameLocation": "650:21:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4741,
+                  "src": "642:29:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4731,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "642:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4734,
+                  "mutability": "mutable",
+                  "name": "fCashAmount",
+                  "nameLocation": "688:11:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4741,
+                  "src": "681:18:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint88",
+                    "typeString": "uint88"
+                  },
+                  "typeName": {
+                    "id": 4733,
+                    "name": "uint88",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "681:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint88",
+                      "typeString": "uint88"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4736,
+                  "mutability": "mutable",
+                  "name": "receiver",
+                  "nameLocation": "717:8:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4741,
+                  "src": "709:16:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4735,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "709:7:14",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4738,
+                  "mutability": "mutable",
+                  "name": "minImpliedRate",
+                  "nameLocation": "742:14:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4741,
+                  "src": "735:21:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint32",
+                    "typeString": "uint32"
+                  },
+                  "typeName": {
+                    "id": 4737,
+                    "name": "uint32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "735:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "632:130:14"
+            },
+            "returnParameters": {
+              "id": 4740,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "771:0:14"
+            },
+            "scope": 4838,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4752,
+            "nodeType": "FunctionDefinition",
+            "src": "778:166:14",
+            "nodes": [],
+            "functionSelector": "29cf1405",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "mintViaUnderlying",
+            "nameLocation": "787:17:14",
+            "parameters": {
+              "id": 4750,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4743,
+                  "mutability": "mutable",
+                  "name": "depositAmountExternal",
+                  "nameLocation": "822:21:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4752,
+                  "src": "814:29:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4742,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "814:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4745,
+                  "mutability": "mutable",
+                  "name": "fCashAmount",
+                  "nameLocation": "860:11:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4752,
+                  "src": "853:18:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint88",
+                    "typeString": "uint88"
+                  },
+                  "typeName": {
+                    "id": 4744,
+                    "name": "uint88",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "853:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint88",
+                      "typeString": "uint88"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4747,
+                  "mutability": "mutable",
+                  "name": "receiver",
+                  "nameLocation": "889:8:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4752,
+                  "src": "881:16:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4746,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "881:7:14",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4749,
+                  "mutability": "mutable",
+                  "name": "minImpliedRate",
+                  "nameLocation": "914:14:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4752,
+                  "src": "907:21:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint32",
+                    "typeString": "uint32"
+                  },
+                  "typeName": {
+                    "id": 4748,
+                    "name": "uint32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "907:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "804:130:14"
+            },
+            "returnParameters": {
+              "id": 4751,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "943:0:14"
+            },
+            "scope": 4838,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4760,
+            "nodeType": "FunctionDefinition",
+            "src": "950:65:14",
+            "nodes": [],
+            "functionSelector": "d84878b8",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "redeem",
+            "nameLocation": "959:6:14",
+            "parameters": {
+              "id": 4758,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4754,
+                  "mutability": "mutable",
+                  "name": "amount",
+                  "nameLocation": "974:6:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4760,
+                  "src": "966:14:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4753,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "966:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4757,
+                  "mutability": "mutable",
+                  "name": "data",
+                  "nameLocation": "1000:4:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4760,
+                  "src": "982:22:14",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_struct$_RedeemOpts_$4722_memory_ptr",
+                    "typeString": "struct IWrappedfCash.RedeemOpts"
+                  },
+                  "typeName": {
+                    "id": 4756,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 4755,
+                      "name": "RedeemOpts",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 4722,
+                      "src": "982:10:14"
+                    },
+                    "referencedDeclaration": 4722,
+                    "src": "982:10:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_struct$_RedeemOpts_$4722_storage_ptr",
+                      "typeString": "struct IWrappedfCash.RedeemOpts"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "965:40:14"
+            },
+            "returnParameters": {
+              "id": 4759,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1014:0:14"
+            },
+            "scope": 4838,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4769,
+            "nodeType": "FunctionDefinition",
+            "src": "1020:89:14",
+            "nodes": [],
+            "functionSelector": "3d3192cb",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "redeemToAsset",
+            "nameLocation": "1029:13:14",
+            "parameters": {
+              "id": 4767,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4762,
+                  "mutability": "mutable",
+                  "name": "amount",
+                  "nameLocation": "1051:6:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4769,
+                  "src": "1043:14:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4761,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1043:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4764,
+                  "mutability": "mutable",
+                  "name": "receiver",
+                  "nameLocation": "1067:8:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4769,
+                  "src": "1059:16:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4763,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1059:7:14",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4766,
+                  "mutability": "mutable",
+                  "name": "maxImpliedRate",
+                  "nameLocation": "1084:14:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4769,
+                  "src": "1077:21:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint32",
+                    "typeString": "uint32"
+                  },
+                  "typeName": {
+                    "id": 4765,
+                    "name": "uint32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1077:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1042:57:14"
+            },
+            "returnParameters": {
+              "id": 4768,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1108:0:14"
+            },
+            "scope": 4838,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4778,
+            "nodeType": "FunctionDefinition",
+            "src": "1114:94:14",
+            "nodes": [],
+            "functionSelector": "745d08d9",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "redeemToUnderlying",
+            "nameLocation": "1123:18:14",
+            "parameters": {
+              "id": 4776,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4771,
+                  "mutability": "mutable",
+                  "name": "amount",
+                  "nameLocation": "1150:6:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4778,
+                  "src": "1142:14:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4770,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1142:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4773,
+                  "mutability": "mutable",
+                  "name": "receiver",
+                  "nameLocation": "1166:8:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4778,
+                  "src": "1158:16:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 4772,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1158:7:14",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4775,
+                  "mutability": "mutable",
+                  "name": "maxImpliedRate",
+                  "nameLocation": "1183:14:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4778,
+                  "src": "1176:21:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint32",
+                    "typeString": "uint32"
+                  },
+                  "typeName": {
+                    "id": 4774,
+                    "name": "uint32",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1176:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint32",
+                      "typeString": "uint32"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1141:57:14"
+            },
+            "returnParameters": {
+              "id": 4777,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1207:0:14"
+            },
+            "scope": 4838,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4784,
+            "nodeType": "FunctionDefinition",
+            "src": "1275:54:14",
+            "nodes": [],
+            "documentation": {
+              "id": 4779,
+              "nodeType": "StructuredDocumentation",
+              "src": "1214:56:14",
+              "text": "@notice Returns the underlying fCash ID of the token"
+            },
+            "functionSelector": "0558d500",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getfCashId",
+            "nameLocation": "1284:10:14",
+            "parameters": {
+              "id": 4780,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1294:2:14"
+            },
+            "returnParameters": {
+              "id": 4783,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4782,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4784,
+                  "src": "1320:7:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 4781,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1320:7:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1319:9:14"
+            },
+            "scope": 4838,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4790,
+            "nodeType": "FunctionDefinition",
+            "src": "1402:63:14",
+            "nodes": [],
+            "documentation": {
+              "id": 4785,
+              "nodeType": "StructuredDocumentation",
+              "src": "1335:62:14",
+              "text": "@notice Returns the underlying fCash maturity of the token"
+            },
+            "functionSelector": "e16695b5",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getMaturity",
+            "nameLocation": "1411:11:14",
+            "parameters": {
+              "id": 4786,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1422:2:14"
+            },
+            "returnParameters": {
+              "id": 4789,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4788,
+                  "mutability": "mutable",
+                  "name": "maturity",
+                  "nameLocation": "1455:8:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4790,
+                  "src": "1448:15:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint40",
+                    "typeString": "uint40"
+                  },
+                  "typeName": {
+                    "id": 4787,
+                    "name": "uint40",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1448:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint40",
+                      "typeString": "uint40"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1447:17:14"
+            },
+            "scope": 4838,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4796,
+            "nodeType": "FunctionDefinition",
+            "src": "1558:51:14",
+            "nodes": [],
+            "documentation": {
+              "id": 4791,
+              "nodeType": "StructuredDocumentation",
+              "src": "1471:82:14",
+              "text": "@notice True if the fCash has matured, assets mature exactly on the block time"
+            },
+            "functionSelector": "a1093295",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "hasMatured",
+            "nameLocation": "1567:10:14",
+            "parameters": {
+              "id": 4792,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1577:2:14"
+            },
+            "returnParameters": {
+              "id": 4795,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4794,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4796,
+                  "src": "1603:4:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 4793,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1603:4:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1602:6:14"
+            },
+            "scope": 4838,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4802,
+            "nodeType": "FunctionDefinition",
+            "src": "1669:67:14",
+            "nodes": [],
+            "documentation": {
+              "id": 4797,
+              "nodeType": "StructuredDocumentation",
+              "src": "1615:49:14",
+              "text": "@notice Returns the underlying fCash currency"
+            },
+            "functionSelector": "cf387fed",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getCurrencyId",
+            "nameLocation": "1678:13:14",
+            "parameters": {
+              "id": 4798,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1691:2:14"
+            },
+            "returnParameters": {
+              "id": 4801,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4800,
+                  "mutability": "mutable",
+                  "name": "currencyId",
+                  "nameLocation": "1724:10:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4802,
+                  "src": "1717:17:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 4799,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1717:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1716:19:14"
+            },
+            "scope": 4838,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4810,
+            "nodeType": "FunctionDefinition",
+            "src": "1798:83:14",
+            "nodes": [],
+            "documentation": {
+              "id": 4803,
+              "nodeType": "StructuredDocumentation",
+              "src": "1742:51:14",
+              "text": "@notice Returns the components of the fCash idd"
+            },
+            "functionSelector": "48d8f98d",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getDecodedID",
+            "nameLocation": "1807:12:14",
+            "parameters": {
+              "id": 4804,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1819:2:14"
+            },
+            "returnParameters": {
+              "id": 4809,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4806,
+                  "mutability": "mutable",
+                  "name": "currencyId",
+                  "nameLocation": "1852:10:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4810,
+                  "src": "1845:17:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint16",
+                    "typeString": "uint16"
+                  },
+                  "typeName": {
+                    "id": 4805,
+                    "name": "uint16",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1845:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint16",
+                      "typeString": "uint16"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4808,
+                  "mutability": "mutable",
+                  "name": "maturity",
+                  "nameLocation": "1871:8:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4810,
+                  "src": "1864:15:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint40",
+                    "typeString": "uint40"
+                  },
+                  "typeName": {
+                    "id": 4807,
+                    "name": "uint40",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "1864:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint40",
+                      "typeString": "uint40"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "1844:36:14"
+            },
+            "scope": 4838,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4816,
+            "nodeType": "FunctionDefinition",
+            "src": "2040:56:14",
+            "nodes": [],
+            "documentation": {
+              "id": 4811,
+              "nodeType": "StructuredDocumentation",
+              "src": "1887:148:14",
+              "text": "@notice Returns the current market index for this fCash asset. If this returns\n zero that means it is idiosyncratic and cannot be traded."
+            },
+            "functionSelector": "cb803ceb",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getMarketIndex",
+            "nameLocation": "2049:14:14",
+            "parameters": {
+              "id": 4812,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2063:2:14"
+            },
+            "returnParameters": {
+              "id": 4815,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4814,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4816,
+                  "src": "2089:5:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint8",
+                    "typeString": "uint8"
+                  },
+                  "typeName": {
+                    "id": 4813,
+                    "name": "uint8",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2089:5:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint8",
+                      "typeString": "uint8"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2088:7:14"
+            },
+            "scope": 4838,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4825,
+            "nodeType": "FunctionDefinition",
+            "src": "2307:105:14",
+            "nodes": [],
+            "documentation": {
+              "id": 4817,
+              "nodeType": "StructuredDocumentation",
+              "src": "2102:200:14",
+              "text": "@notice Returns the token and precision of the token that this token settles\n to. For example, fUSDC will return the USDC token address and 1e6. The zero\n address will represent ETH."
+            },
+            "functionSelector": "ee719bc8",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getUnderlyingToken",
+            "nameLocation": "2316:18:14",
+            "parameters": {
+              "id": 4818,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2334:2:14"
+            },
+            "returnParameters": {
+              "id": 4824,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4821,
+                  "mutability": "mutable",
+                  "name": "underlyingToken",
+                  "nameLocation": "2367:15:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4825,
+                  "src": "2360:22:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_contract$_IERC20_$6709",
+                    "typeString": "contract IERC20"
+                  },
+                  "typeName": {
+                    "id": 4820,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 4819,
+                      "name": "IERC20",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 6709,
+                      "src": "2360:6:14"
+                    },
+                    "referencedDeclaration": 6709,
+                    "src": "2360:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_contract$_IERC20_$6709",
+                      "typeString": "contract IERC20"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4823,
+                  "mutability": "mutable",
+                  "name": "underlyingPrecision",
+                  "nameLocation": "2391:19:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4825,
+                  "src": "2384:26:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_int256",
+                    "typeString": "int256"
+                  },
+                  "typeName": {
+                    "id": 4822,
+                    "name": "int256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2384:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_int256",
+                      "typeString": "int256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2359:52:14"
+            },
+            "scope": 4838,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 4837,
+            "nodeType": "FunctionDefinition",
+            "src": "2558:111:14",
+            "nodes": [],
+            "documentation": {
+              "id": 4826,
+              "nodeType": "StructuredDocumentation",
+              "src": "2418:135:14",
+              "text": "@notice Returns the asset token which the fCash settles to. This will be an interest\n bearing token like a cToken or aToken."
+            },
+            "functionSelector": "f8eef10f",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getAssetToken",
+            "nameLocation": "2567:13:14",
+            "parameters": {
+              "id": 4827,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2580:2:14"
+            },
+            "returnParameters": {
+              "id": 4836,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 4830,
+                  "mutability": "mutable",
+                  "name": "assetToken",
+                  "nameLocation": "2613:10:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4837,
+                  "src": "2606:17:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_contract$_IERC20_$6709",
+                    "typeString": "contract IERC20"
+                  },
+                  "typeName": {
+                    "id": 4829,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 4828,
+                      "name": "IERC20",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 6709,
+                      "src": "2606:6:14"
+                    },
+                    "referencedDeclaration": 6709,
+                    "src": "2606:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_contract$_IERC20_$6709",
+                      "typeString": "contract IERC20"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4832,
+                  "mutability": "mutable",
+                  "name": "assetPrecision",
+                  "nameLocation": "2632:14:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4837,
+                  "src": "2625:21:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_int256",
+                    "typeString": "int256"
+                  },
+                  "typeName": {
+                    "id": 4831,
+                    "name": "int256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2625:6:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_int256",
+                      "typeString": "int256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 4835,
+                  "mutability": "mutable",
+                  "name": "tokenType",
+                  "nameLocation": "2658:9:14",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4837,
+                  "src": "2648:19:14",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_enum$_TokenType_$974",
+                    "typeString": "enum TokenType"
+                  },
+                  "typeName": {
+                    "id": 4834,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 4833,
+                      "name": "TokenType",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 974,
+                      "src": "2648:9:14"
+                    },
+                    "referencedDeclaration": 974,
+                    "src": "2648:9:14",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_enum$_TokenType_$974",
+                      "typeString": "enum TokenType"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2605:63:14"
+            },
+            "scope": 4838,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "IWrappedfCash",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          4838
+        ],
+        "name": "IWrappedfCash",
+        "nameLocation": "277:13:14",
+        "scope": 4846,
+        "usedErrors": []
+      },
+      {
+        "id": 4845,
+        "nodeType": "ContractDefinition",
+        "src": "2674:70:14",
+        "nodes": [],
+        "abstract": false,
+        "baseContracts": [
+          {
+            "baseName": {
+              "id": 4839,
+              "name": "IWrappedfCash",
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 4838,
+              "src": "2709:13:14"
+            },
+            "id": 4840,
+            "nodeType": "InheritanceSpecifier",
+            "src": "2709:13:14"
+          },
+          {
+            "baseName": {
+              "id": 4841,
+              "name": "IERC777",
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 7117,
+              "src": "2724:7:14"
+            },
+            "id": 4842,
+            "nodeType": "InheritanceSpecifier",
+            "src": "2724:7:14"
+          },
+          {
+            "baseName": {
+              "id": 4843,
+              "name": "IERC4626",
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 4423,
+              "src": "2733:8:14"
+            },
+            "id": 4844,
+            "nodeType": "InheritanceSpecifier",
+            "src": "2733:8:14"
+          }
+        ],
+        "canonicalName": "IWrappedfCashComplete",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          4845,
+          4423,
+          7117,
+          4838
+        ],
+        "name": "IWrappedfCashComplete",
+        "nameLocation": "2684:21:14",
+        "scope": 4846,
+        "usedErrors": []
+      }
+    ],
+    "license": "GPL-3.0-only"
+  },
+  "id": 14
+}
