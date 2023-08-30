@@ -2,9 +2,10 @@
 pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
+import "../../interfaces/notional/IWrappedfCashFactory.sol";
 import "./nBeaconProxy.sol";
 
-contract WrappedfCashFactory {
+contract WrappedfCashFactory is IWrappedfCashFactory {
 
     /// @dev the Beacon contract here is an UpgradeableBeacon proxy, the contract
     /// at this address can be upgraded which will upgrade all deployed wrappers.

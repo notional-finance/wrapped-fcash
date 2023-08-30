@@ -324,6 +324,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         tokensTransferred = balanceAfter - balanceBefore;
 
         if (isETH) {
+            // TODO: we can remove the re-wrap if we use redeemToWETH
             WETH.deposit{value: tokensTransferred}();
             // No need to use safeTransfer for WETH since it is known to be compatible
             IERC20(address(WETH)).transfer(receiver, tokensTransferred);
