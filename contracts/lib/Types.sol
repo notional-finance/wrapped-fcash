@@ -116,27 +116,25 @@ struct CashGroupSettings {
     // Index of the AMMs on chain that will be made available. Idiosyncratic fCash
     // that is dated less than the longest AMM will be tradable.
     uint8 maxMarketIndex;
-    // Time window in minutes that the rate oracle will be averaged over
-    uint8 rateOracleTimeWindowMin;
-    // Total fees per trade, specified in BPS
-    uint8 totalFeeBPS;
+    // Time window in 5 minute increments that the rate oracle will be averaged over
+    uint8 rateOracleTimeWindow5Min;
+    // Absolute maximum discount factor as a discount from 1e9, specified in five basis points
+    // subtracted from 1e9
+    uint8 maxDiscountFactor5BPS;
     // Share of the fees given to the protocol, denominated in percentage
     uint8 reserveFeeShare;
     // Debt buffer specified in 5 BPS increments
-    uint8 debtBuffer5BPS;
+    uint8 debtBuffer25BPS;
     // fCash haircut specified in 5 BPS increments
-    uint8 fCashHaircut5BPS;
-    // If an account has a negative cash balance, it can be settled by incurring debt at the 3 month market. This
-    // is the basis points for the penalty rate that will be added the current 3 month oracle rate.
-    uint8 settlementPenaltyRate5BPS;
+    uint8 fCashHaircut25BPS;
+    // Minimum oracle interest rates for fCash per market, specified in 25 bps increments
+    uint8 minOracleRate25BPS;
     // If an account has fCash that is being liquidated, this is the discount that the liquidator can purchase it for
-    uint8 liquidationfCashHaircut5BPS;
+    uint8 liquidationfCashHaircut25BPS;
     // If an account has fCash that is being liquidated, this is the discount that the liquidator can purchase it for
-    uint8 liquidationDebtBuffer5BPS;
-    // Liquidity token haircut applied to cash claims, specified as a percentage between 0 and 100
-    uint8[] liquidityTokenHaircuts;
-    // Rate scalar used to determine the slippage of the market
-    uint8[] rateScalars;
+    uint8 liquidationDebtBuffer25BPS;
+    // Max oracle rate specified in 25bps increments as a discount from the max rate in the market.
+    uint8 maxOracleRate25BPS;
 }
 
 /// @dev Holds account level context information used to determine settlement and
@@ -152,6 +150,12 @@ struct AccountContext {
     uint16 bitmapCurrencyId;
     // 9 total active currencies possible (2 bytes each)
     bytes18 activeCurrencies;
+    // If this is set to true, the account can borrow variable prime cash and incur
+    // negative cash balances inside BatchAction. This does not impact the settlement
+    // of negative fCash to prime cash which will happen regardless of this setting. This
+    // exists here mainly as a safety setting to ensure that accounts do not accidentally
+    // incur negative cash balances.
+    bool allowPrimeBorrow;
 }
 
 /// @dev Used in view methods to return account balances in a developer friendly manner

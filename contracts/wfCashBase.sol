@@ -49,7 +49,6 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         _fCashId = uint64(fCashId);
 
         (IERC20 underlyingToken, /* */) = getUnderlyingToken();
-        (IERC20 assetToken, /* */, /* */) = getAssetToken();
 
         string memory _symbol = address(underlyingToken) == Constants.ETH_ADDRESS
             ? "ETH"
@@ -64,13 +63,7 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
             string(abi.encodePacked("wf", _symbol, ":", _maturity))
         );
 
-        // Set approvals for Notional. It is possible for an asset token address to equal the underlying
-        // token address when there is no money market involved.
-        assetToken.safeApprove(address(NotionalV2), type(uint256).max);
-        if (
-            address(assetToken) != address(underlyingToken) &&
-            address(underlyingToken) != Constants.ETH_ADDRESS
-        ) {
+        if (address(underlyingToken) != Constants.ETH_ADDRESS) {
             underlyingToken.safeApprove(address(NotionalV2), type(uint256).max);
         }
     }
