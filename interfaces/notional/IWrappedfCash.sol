@@ -16,14 +16,6 @@ interface IWrappedfCash {
     }
     function initialize(uint16 currencyId, uint40 maturity) external;
 
-    /// @notice Mints wrapped fCash ERC20 tokens
-    function mintViaAsset(
-        uint256 depositAmountExternal,
-        uint88 fCashAmount,
-        address receiver,
-        uint32 minImpliedRate
-    ) external;
-
     function mintViaUnderlying(
         uint256 depositAmountExternal,
         uint88 fCashAmount,
@@ -32,7 +24,6 @@ interface IWrappedfCash {
     ) external;
 
     function redeem(uint256 amount, RedeemOpts memory data) external;
-    function redeemToAsset(uint256 amount, address receiver, uint32 maxImpliedRate) external;
     function redeemToUnderlying(uint256 amount, address receiver, uint32 maxImpliedRate) external;
 
     /// @notice Returns the underlying fCash ID of the token

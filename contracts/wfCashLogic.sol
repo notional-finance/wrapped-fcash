@@ -17,20 +17,6 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
 
     /***** Mint Methods *****/
 
-    /// @notice Lends deposit amount in return for fCashAmount using cTokens or aTokens
-    /// @param depositAmountExternal amount of cash to deposit into this method
-    /// @param fCashAmount amount of fCash to purchase (lend)
-    /// @param receiver address to receive the fCash shares
-    /// @param minImpliedRate minimum annualized interest rate to lend at
-    function mintViaAsset(
-        uint256 depositAmountExternal,
-        uint88 fCashAmount,
-        address receiver,
-        uint32 minImpliedRate
-    ) external override {
-        revert("Deprecated");
-    }
-
     /// @notice Lends deposit amount in return for fCashAmount using underlying tokens
     /// @param depositAmountExternal amount of cash to deposit into this method
     /// @param fCashAmount amount of fCash to purchase (lend)
@@ -170,16 +156,6 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         _burnInternal(msg.sender, amount, opts);
     }
 
-    /// @notice Redeems tokens to asset tokens
-    /// @dev re-entrancy is protected on _burn
-    function redeemToAsset(
-        uint256 amount,
-        address receiver,
-        uint32 maxImpliedRate
-    ) external override {
-        revert("Deprecated");
-    }
-
     /// @notice Redeems tokens to underlying
     /// @dev re-entrancy is protected on _burn
     function redeemToUnderlying(
@@ -225,8 +201,6 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         uint256 amount,
         RedeemOpts memory opts
     ) internal nonReentrant {
-        // Save the total supply value before burning to calculate the cash claim share
-        uint256 initialTotalSupply = totalSupply();
         require(opts.receiver != address(0), "Receiver is zero address");
         require(opts.redeemToUnderlying);
         // This will validate that the account has sufficient tokens to burn and make

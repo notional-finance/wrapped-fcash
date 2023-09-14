@@ -17,9 +17,6 @@ contract WrappedfCashFactory is IWrappedfCashFactory {
     /// deployed will pay for itself after 3 on-chain calls to computeAddress.
     mapping(uint256 => mapping(uint256 => address)) internal _cachedWrapperAddress;
 
-    /// @notice Emitted when a new fCash wrapper has been deployed
-    event WrapperDeployed(uint16 currencyId, uint40 maturity, address wrapper);
-
     constructor(address _beacon) {
         BEACON = _beacon;
     }
