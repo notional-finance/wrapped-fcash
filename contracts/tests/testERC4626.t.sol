@@ -98,12 +98,28 @@ contract TestWrapperERC4626 is BaseTest {
 
         assertLt(w.allowance(LENDER, operator), 5e8);
     }
+
+    function test_RevertIf_Mint_PostMaturity() public {
+        vm.warp(maturity_3mo);
+        NOTIONAL.initializeMarkets(DAI, false);
+        asset.approve(address(w), 5e18);
+
+        vm.expectRevert("fCash matured");
+        w.mint(1e8, LENDER);
+    }
+
+    function test_RevertIf_Deposit_PostMaturity() public {
+        vm.warp(maturity_3mo);
+        NOTIONAL.initializeMarkets(DAI, false);
+        asset.approve(address(w), 5e18);
+
+        vm.expectRevert("fCash matured");
+        w.deposit(1e8, LENDER);
+    }
 }
 
 /*
 contract TestWrapperERC4626 is BaseTest {
-    function test_RevertIf_Mint_PostMaturity() public {}
-    function test_RevertIf_Deposit_PostMaturity() public {}
     function test_Withdraw_PostMaturity() public {}
     function test_Redeem_PostMaturity() public {}
 }
