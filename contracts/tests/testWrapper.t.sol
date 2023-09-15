@@ -15,7 +15,7 @@ contract TestWrapperERC1155 is BaseTest {
         (/* */, /* */, /* */, bytes32 encodedTrade) = NOTIONAL.getDepositFromfCashLend(
             ETH,
             0.05e8,
-            maturity,
+            maturity_3mo,
             0,
             block.timestamp
         );
@@ -34,7 +34,7 @@ contract TestWrapperERC1155 is BaseTest {
         });
         NOTIONAL.batchBalanceAndTradeAction{value: 0.05e18}(LENDER, t);
 
-        w = wfCashERC4626(factory.deployWrapper(ETH, maturity));
+        w = wfCashERC4626(factory.deployWrapper(ETH, maturity_3mo));
         fCashId = w.getfCashId();
     }
 
@@ -52,14 +52,14 @@ contract TestWrapperERC1155 is BaseTest {
     }
 
     function test_RevertIfInvalidCurrency() public {
-        wfCashERC4626 w2 = wfCashERC4626(factory.deployWrapper(DAI, maturity));
+        wfCashERC4626 w2 = wfCashERC4626(factory.deployWrapper(DAI, maturity_3mo));
 
         vm.expectRevert("Invalid");
         NOTIONAL.safeTransferFrom(LENDER, address(w2), fCashId, 0.05e8, "");
     }
 
     function test_RevertIfInvalidMaturity() public {
-        wfCashERC4626 w2 = wfCashERC4626(factory.deployWrapper(ETH, maturity + 86400 * 90));
+        wfCashERC4626 w2 = wfCashERC4626(factory.deployWrapper(ETH, maturity_6mo));
 
         vm.expectRevert("Invalid");
         NOTIONAL.safeTransferFrom(LENDER, address(w2), fCashId, 0.05e8, "");

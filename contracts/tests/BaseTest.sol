@@ -19,7 +19,6 @@ abstract contract BaseTest is Test {
     nUpgradeableBeacon beacon;
     IWrappedfCashFactory factory;
 
-    wfCashERC4626 wrapper;
     string ARBITRUM_RPC_URL = vm.envString("ARBITRUM_RPC_URL");
     uint256 ARBITRUM_FORK_BLOCK = vm.envUint("ARBITRUM_FORK_BLOCK");
 
@@ -28,15 +27,15 @@ abstract contract BaseTest is Test {
     uint16 constant ETH = 1;
     uint16 constant DAI = 2;
     uint16 constant USDC = 3;
-    uint40 maturity;
+    uint40 maturity_3mo;
+    uint40 maturity_6mo;
 
     function setUp() public virtual {
         vm.createSelectFork(ARBITRUM_RPC_URL, ARBITRUM_FORK_BLOCK);
         impl = new wfCashERC4626(NOTIONAL, WETH);
         beacon = new nUpgradeableBeacon(address(impl));
         factory = new WrappedfCashFactory(address(beacon));
-        maturity = uint40(NOTIONAL.getActiveMarkets(ETH)[0].maturity);
-
-        wrapper = wfCashERC4626(factory.deployWrapper(DAI, maturity));
+        maturity_3mo = uint40(NOTIONAL.getActiveMarkets(ETH)[0].maturity);
+        maturity_6mo = uint40(NOTIONAL.getActiveMarkets(ETH)[1].maturity);
     }
 }
