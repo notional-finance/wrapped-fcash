@@ -16,6 +16,8 @@ contract TestInvariants is BaseTest {
         targetContract(address(handler));
     }
 
+    /// forge-config: default.invariant.runs = 10
+    /// forge-config: default.invariant.depth = 4
     /// forge-config: default.invariant.fail-on-revert = true
     function invariant_totalSupply() external {
         assertEq(handler.totalShares(), wrapper.totalSupply());
@@ -24,6 +26,8 @@ contract TestInvariants is BaseTest {
         assertEq(NOTIONAL.balanceOf(address(wrapper), fCashId), wrapper.totalSupply());
     }
 
+    /// forge-config: default.invariant.runs = 10
+    /// forge-config: default.invariant.depth = 4
     /// forge-config: default.invariant.fail-on-revert = true
     function invariant_totalAssets() external {
         int256 presentValue = NOTIONAL.getPresentfCashValue(

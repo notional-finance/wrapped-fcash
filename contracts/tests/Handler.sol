@@ -43,11 +43,9 @@ contract Handler is Test {
         vm.stopPrank();
     }
 
-    function mintViaERC1155(uint256 actorIndexSeed) useActor(actorIndexSeed, false) public {
+    function _mintViaERC1155(uint256 fCashAmount) internal {
         uint16 currencyId = wrapper.getCurrencyId();
         uint40 maturity = wrapper.getMaturity();
-        // TODO: add a bounding for this....
-        uint256 fCashAmount = 0.05e8;
         if (currencyId == ETH) vm.deal(currentActor, 1e18);
 
         (
@@ -79,19 +77,25 @@ contract Handler is Test {
         NOTIONAL.batchBalanceAndTradeAction{value: msgValue}(currentActor, t);
 
         // This will mint via ERC1155 transfer
+        uint256 balanceBefore = wrapper.balanceOf(currentActor);
+        uint256 notionalBefore = NOTIONAL.balanceOf(currentActor, fCashId);
         NOTIONAL.safeTransferFrom(currentActor, address(wrapper), fCashId, fCashAmount, "");
 
-        PortfolioAsset[] memory assets = NOTIONAL.getAccountPortfolio(currentActor);
-        assertEq(assets.length, 0);
-        assertEq(wrapper.balanceOf(currentActor), fCashAmount);
+        assertEq(wrapper.balanceOf(currentActor) - balanceBefore, fCashAmount);
+        assertEq(NOTIONAL.balanceOf(currentActor, fCashId), notionalBefore - fCashAmount, "Notional Balance");
 
         totalShares += fCashAmount;
     }
 
+    function mintViaERC1155(uint256 actorIndexSeed) useActor(actorIndexSeed, false) public {
+        _mintViaERC1155(0.05e8);
+    }
+
     function redeemViaERC1155(uint256 actorIndexSeed, uint256 redeemShare) useActor(actorIndexSeed, false) public {
         redeemShare = bound(redeemShare, 1, 100);
-        mintViaERC1155(actorIndexSeed);
+        _mintViaERC1155(0.05e8);
         uint256 balance = wrapper.balanceOf(currentActor);
+        uint256 notionalBefore = NOTIONAL.balanceOf(currentActor, fCashId);
         uint256 redeemAmount = balance * redeemShare / 100;
 
         wrapper.redeem(redeemAmount, IWrappedfCash.RedeemOpts({
@@ -101,8 +105,8 @@ contract Handler is Test {
             maxImpliedRate: 0
         }));
 
-        assertEq(wrapper.balanceOf(currentActor), balance - redeemAmount);
-        assertEq(NOTIONAL.balanceOf(currentActor, fCashId), redeemAmount);
+        assertEq(wrapper.balanceOf(currentActor), balance - redeemAmount, "Wrapper Balance");
+        assertEq(NOTIONAL.balanceOf(currentActor, fCashId), notionalBefore + redeemAmount, "Notional Balance");
         totalShares -= redeemAmount;
     }
 
