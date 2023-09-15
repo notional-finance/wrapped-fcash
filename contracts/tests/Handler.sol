@@ -111,17 +111,19 @@ contract Handler is Test {
         totalShares -= redeemAmount;
     }
 
-    function deposit(uint256 actorIndexSeed) useActor(actorIndexSeed, true) public {
+    function deposit(uint256 actorIndexSeed, uint256 receiverIndex) useActor(actorIndexSeed, true) public {
+        receiverIndex = bound(receiverIndex, 0, actors.length - 1);
+        address receiver = actors[receiverIndex];
         uint256 assets = 0.05e8 * precision / 1e8;
 
         uint256 assetsBefore = asset.balanceOf(currentActor);
-        uint256 sharesBefore = wrapper.balanceOf(currentActor);
+        uint256 sharesBefore = wrapper.balanceOf(receiver);
         uint256 previewValue = wrapper.previewDeposit(assets);
 
-        uint256 shares = wrapper.deposit(assets, currentActor);
+        uint256 shares = wrapper.deposit(assets, receiver);
 
         uint256 assetsAfter = asset.balanceOf(currentActor);
-        uint256 sharesAfter = wrapper.balanceOf(currentActor);
+        uint256 sharesAfter = wrapper.balanceOf(receiver);
 
         assertEq(previewValue, shares, "Deposit Shares");
         assertEq(sharesAfter - sharesBefore, shares, "Deposit Shares");
@@ -130,17 +132,19 @@ contract Handler is Test {
         totalShares += shares;
     }
 
-    function mint(uint256 actorIndexSeed) useActor(actorIndexSeed, true) public {
+    function mint(uint256 actorIndexSeed, uint256 receiverIndex) useActor(actorIndexSeed, true) public {
+        receiverIndex = bound(receiverIndex, 0, actors.length - 1);
+        address receiver = actors[receiverIndex];
         uint256 shares = 0.05e8;
 
         uint256 assetsBefore = asset.balanceOf(currentActor);
-        uint256 sharesBefore = wrapper.balanceOf(currentActor);
+        uint256 sharesBefore = wrapper.balanceOf(receiver);
         uint256 previewValue = wrapper.previewMint(shares);
 
-        uint256 assets = wrapper.mint(shares, currentActor);
+        uint256 assets = wrapper.mint(shares, receiver);
 
         uint256 assetsAfter = asset.balanceOf(currentActor);
-        uint256 sharesAfter = wrapper.balanceOf(currentActor);
+        uint256 sharesAfter = wrapper.balanceOf(receiver);
 
         assertEq(previewValue, assets, "Mint Assets");
         assertEq(sharesAfter - sharesBefore, shares, "Mint Shares");
@@ -149,7 +153,14 @@ contract Handler is Test {
         totalShares += shares;
     }
 
-    function withdraw(uint256 actorIndexSeed, uint256 redeemShare) useActor(actorIndexSeed, true) public {
+    function withdraw(
+        uint256 actorIndexSeed,
+        uint256 receiverIndex,
+        uint256 redeemShare
+    ) useActor(actorIndexSeed, true) public {
+        receiverIndex = bound(receiverIndex, 0, actors.length - 1);
+        address receiver = actors[receiverIndex];
+
         uint256 initialShares = 0.05e8;
         wrapper.mint(initialShares, currentActor);
         totalShares += initialShares;
@@ -158,13 +169,13 @@ contract Handler is Test {
         uint256 maxWithdraw = wrapper.maxWithdraw(currentActor);
         uint256 assets = maxWithdraw * redeemShare / 100;
 
-        uint256 assetsBefore = asset.balanceOf(currentActor);
+        uint256 assetsBefore = asset.balanceOf(receiver);
         uint256 sharesBefore = wrapper.balanceOf(currentActor);
         uint256 previewValue = wrapper.previewWithdraw(assets);
 
-        uint256 shares = wrapper.withdraw(assets, currentActor, currentActor);
+        uint256 shares = wrapper.withdraw(assets, receiver, currentActor);
 
-        uint256 assetsAfter = asset.balanceOf(currentActor);
+        uint256 assetsAfter = asset.balanceOf(receiver);
         uint256 sharesAfter = wrapper.balanceOf(currentActor);
 
         assertEq(previewValue, shares, "Withdraw Preview");
@@ -175,7 +186,14 @@ contract Handler is Test {
         totalShares -= shares;
     }
 
-    function redeem(uint256 actorIndexSeed, uint256 redeemShare) useActor(actorIndexSeed, true) public {
+    function redeem(
+        uint256 actorIndexSeed,
+        uint256 receiverIndex,
+        uint256 redeemShare
+    ) useActor(actorIndexSeed, true) public {
+        receiverIndex = bound(receiverIndex, 0, actors.length - 1);
+        address receiver = actors[receiverIndex];
+
         uint256 initialShares = 0.05e8;
         wrapper.mint(initialShares, currentActor);
         totalShares += initialShares;
@@ -184,13 +202,13 @@ contract Handler is Test {
         uint256 maxRedeem = wrapper.maxRedeem(currentActor);
         uint256 shares = maxRedeem * redeemShare / 100;
 
-        uint256 assetsBefore = asset.balanceOf(currentActor);
+        uint256 assetsBefore = asset.balanceOf(receiver);
         uint256 sharesBefore = wrapper.balanceOf(currentActor);
         uint256 previewValue = wrapper.previewRedeem(shares);
 
-        uint256 assets = wrapper.redeem(shares, currentActor, currentActor);
+        uint256 assets = wrapper.redeem(shares, receiver, currentActor);
 
-        uint256 assetsAfter = asset.balanceOf(currentActor);
+        uint256 assetsAfter = asset.balanceOf(receiver);
         uint256 sharesAfter = wrapper.balanceOf(currentActor);
 
         assertEq(previewValue, assets, "Redeem Preview");

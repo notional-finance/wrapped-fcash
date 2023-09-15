@@ -118,17 +118,9 @@ contract TestWrapperERC1155 is BaseTest {
 
 /*
 contract TestWrapperERC4626 is BaseTest {
-    function test_Mint() public {}
-    function test_Deposit() public {}
-    function test_Mint_ToReceiver() public {}
-    function test_Deposit_ToReceiver() public {}
     function test_RevertIf_Mint_InsufficientBalance() public {}
     function test_RevertIf_Deposit_InsufficientBalance() public {}
 
-    function test_Withdraw() public {}
-    function test_Redeem() public {}
-    function test_Withdraw_FromReceiver() public {}
-    function test_Redeem_FromReceiver() public {}
     function test_RevertIf_Redeem_AboveBalance() public {}
     function test_RevertIf_Withdraw_AboveBalance() public {}
     function test_RevertIf_Redeem_WithoutApproval() public {}
