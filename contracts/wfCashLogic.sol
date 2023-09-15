@@ -201,6 +201,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         super._burn(from, amount);
 
         if (hasMatured()) {
+            require(opts.transferfCash == false);
             // If the fCash has matured, then we need to ensure that the account is settled
             // and then we will transfer back the account's share of asset tokens.
 

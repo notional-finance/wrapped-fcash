@@ -12,11 +12,11 @@ contract Handler is Test {
     INotionalV2 constant NOTIONAL = INotionalV2(0x1344A36A1B56144C3Bc62E7757377D288fDE0369);
 
     wfCashERC4626 wrapper;
-    address[] public actors;
+    address[5] public actors;
     address internal currentActor;
-    uint256 totalShares;
-    uint256 precision;
-    uint256 fCashId;
+    uint256 public totalShares;
+    uint256 public precision;
+    uint256 public fCashId;
 
     constructor(wfCashERC4626 _wrapper) {
         wrapper = _wrapper;
