@@ -63,7 +63,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4626-maxWithdraw} */
     function maxWithdraw(address owner) external view override returns (uint256) {
-        return previewWithdraw(balanceOf(owner));
+        return previewRedeem(balanceOf(owner));
     }
 
     /** @dev See {IERC4626-maxRedeem} */

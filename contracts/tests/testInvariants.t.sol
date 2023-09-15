@@ -14,21 +14,16 @@ contract TestInvariants is BaseTest {
         wrapper = wfCashERC4626(factory.deployWrapper(ETH, maturity_3mo));
         handler = new Handler(wrapper);
         targetContract(address(handler));
-
-        /** Use this to target a single selector */
-        bytes4[] memory selectors = new bytes4[](1);
-        selectors[0] = Handler.deposit.selector;
-        targetSelector(FuzzSelector(address(handler), selectors));
     }
 
     /// forge-config: default.invariant.runs = 10
     /// forge-config: default.invariant.depth = 4
     /// forge-config: default.invariant.fail-on-revert = true
     function invariant_totalSupply() external {
-        assertEq(handler.totalShares(), wrapper.totalSupply());
+        assertEq(handler.totalShares(), wrapper.totalSupply(), "Total Supply");
 
         uint256 fCashId = wrapper.getfCashId();
-        assertEq(NOTIONAL.balanceOf(address(wrapper), fCashId), wrapper.totalSupply());
+        assertEq(NOTIONAL.balanceOf(address(wrapper), fCashId), wrapper.totalSupply(), "Wrapper Balance");
     }
 
     /// forge-config: default.invariant.runs = 10
@@ -43,6 +38,6 @@ contract TestInvariants is BaseTest {
             false
         ) * int256(handler.precision()) / 1e8;
         assertGe(presentValue, 0);
-        assertEq(uint256(presentValue), wrapper.totalAssets());
+        assertEq(uint256(presentValue), wrapper.totalAssets(), "Present Value");
     }
 }

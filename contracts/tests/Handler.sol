@@ -112,24 +112,92 @@ contract Handler is Test {
     }
 
     function deposit(uint256 actorIndexSeed) useActor(actorIndexSeed, true) public {
-        uint256 amount = 0.05e8 * precision / 1e8;
-        uint256 balanceBefore = asset.balanceOf(currentActor);
-        uint256 previewShares = wrapper.previewDeposit(amount);
+        uint256 assets = 0.05e8 * precision / 1e8;
 
-        uint256 shares = wrapper.deposit(amount, currentActor);
-        uint256 balanceAfter = asset.balanceOf(currentActor);
+        uint256 assetsBefore = asset.balanceOf(currentActor);
+        uint256 sharesBefore = wrapper.balanceOf(currentActor);
+        uint256 previewValue = wrapper.previewDeposit(assets);
 
-        assertEq(previewShares, shares, "Deposit Shares");
-        assertLe(amount - (balanceBefore - balanceAfter), 1e10, "Deposit Amount");
+        uint256 shares = wrapper.deposit(assets, currentActor);
+
+        uint256 assetsAfter = asset.balanceOf(currentActor);
+        uint256 sharesAfter = wrapper.balanceOf(currentActor);
+
+        assertEq(previewValue, shares, "Deposit Shares");
+        assertEq(sharesAfter - sharesBefore, shares, "Deposit Shares");
+        assertLe(assets - (assetsBefore - assetsAfter), 1e10, "Deposit Amount");
 
         totalShares += shares;
     }
 
-    // function mint(uint256 actorIndexSeed) useActor(actorIndexSeed, false) public {
-    // }
-    // function withdraw(uint256 actorIndexSeed) useActor(actorIndexSeed, false) public {
-    // }
-    // function redeem(uint256 actorIndexSeed) useActor(actorIndexSeed, false) public {
-    // }
+    function mint(uint256 actorIndexSeed) useActor(actorIndexSeed, true) public {
+        uint256 shares = 0.05e8;
 
+        uint256 assetsBefore = asset.balanceOf(currentActor);
+        uint256 sharesBefore = wrapper.balanceOf(currentActor);
+        uint256 previewValue = wrapper.previewMint(shares);
+
+        uint256 assets = wrapper.mint(shares, currentActor);
+
+        uint256 assetsAfter = asset.balanceOf(currentActor);
+        uint256 sharesAfter = wrapper.balanceOf(currentActor);
+
+        assertEq(previewValue, assets, "Mint Assets");
+        assertEq(sharesAfter - sharesBefore, shares, "Mint Shares");
+        assertLe(assets - (assetsBefore - assetsAfter), 1e10, "Mint Amount");
+
+        totalShares += shares;
+    }
+
+    function withdraw(uint256 actorIndexSeed, uint256 redeemShare) useActor(actorIndexSeed, true) public {
+        uint256 initialShares = 0.05e8;
+        wrapper.mint(initialShares, currentActor);
+        totalShares += initialShares;
+        redeemShare = bound(redeemShare, 1, 100);
+
+        uint256 maxWithdraw = wrapper.maxWithdraw(currentActor);
+        uint256 assets = maxWithdraw * redeemShare / 100;
+
+        uint256 assetsBefore = asset.balanceOf(currentActor);
+        uint256 sharesBefore = wrapper.balanceOf(currentActor);
+        uint256 previewValue = wrapper.previewWithdraw(assets);
+
+        uint256 shares = wrapper.withdraw(assets, currentActor, currentActor);
+
+        uint256 assetsAfter = asset.balanceOf(currentActor);
+        uint256 sharesAfter = wrapper.balanceOf(currentActor);
+
+        assertEq(previewValue, shares, "Withdraw Preview");
+        assertEq(sharesBefore - sharesAfter, shares, "Withdraw Shares");
+        // NOTE: this is a bit short...
+        assertLe(assets - (assetsAfter - assetsBefore), 5e10, "Withdraw Amount");
+
+        totalShares -= shares;
+    }
+
+    function redeem(uint256 actorIndexSeed, uint256 redeemShare) useActor(actorIndexSeed, true) public {
+        uint256 initialShares = 0.05e8;
+        wrapper.mint(initialShares, currentActor);
+        totalShares += initialShares;
+        redeemShare = bound(redeemShare, 1, 100);
+
+        uint256 maxRedeem = wrapper.maxRedeem(currentActor);
+        uint256 shares = maxRedeem * redeemShare / 100;
+
+        uint256 assetsBefore = asset.balanceOf(currentActor);
+        uint256 sharesBefore = wrapper.balanceOf(currentActor);
+        uint256 previewValue = wrapper.previewRedeem(shares);
+
+        uint256 assets = wrapper.redeem(shares, currentActor, currentActor);
+
+        uint256 assetsAfter = asset.balanceOf(currentActor);
+        uint256 sharesAfter = wrapper.balanceOf(currentActor);
+
+        assertEq(previewValue, assets, "Redeem Preview");
+        assertEq(sharesBefore - sharesAfter, shares, " Redeem Shares");
+        // NOTE: this is a bit short...
+        assertLe(assets - (assetsAfter - assetsBefore), 1e10, " Redeem Amount");
+
+        totalShares -= shares;
+    }
 }
