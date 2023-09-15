@@ -14,6 +14,11 @@ contract TestInvariants is BaseTest {
         wrapper = wfCashERC4626(factory.deployWrapper(ETH, maturity_3mo));
         handler = new Handler(wrapper);
         targetContract(address(handler));
+
+        /** Use this to target a single selector */
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = Handler.deposit.selector;
+        targetSelector(FuzzSelector(address(handler), selectors));
     }
 
     /// forge-config: default.invariant.runs = 10

@@ -146,7 +146,7 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         uint8 marketIndex = getMarketIndex();
         if (marketIndex == 0) return 0;
         MarketParameters[] memory markets = NotionalV2.getActiveMarkets(getCurrencyId());
-        require(markets.length <= marketIndex);
+        require(marketIndex <= markets.length);
 
         int256 totalfCash = markets[marketIndex - 1].totalfCash;
         require(totalfCash > 0);

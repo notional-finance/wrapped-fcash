@@ -17,6 +17,7 @@ contract Handler is Test {
     uint256 public totalShares;
     uint256 public precision;
     uint256 public fCashId;
+    IERC20Metadata public asset;
 
     constructor(wfCashERC4626 _wrapper) {
         wrapper = _wrapper;
@@ -32,7 +33,7 @@ contract Handler is Test {
         currentActor = actors[bound(actorIndexSeed, 0, actors.length - 1)];
 
         // NOTE: wrappers always use WETH
-        IERC20Metadata asset = IERC20Metadata(wrapper.asset());
+        asset = IERC20Metadata(wrapper.asset());
         precision = 10 ** asset.decimals();
         fCashId = wrapper.getfCashId();
         deal(address(asset), currentActor, 100 * precision, true);
@@ -110,8 +111,20 @@ contract Handler is Test {
         totalShares -= redeemAmount;
     }
 
-    // function deposit(uint256 actorIndexSeed) useActor(actorIndexSeed, false) public {
-    // }
+    function deposit(uint256 actorIndexSeed) useActor(actorIndexSeed, true) public {
+        uint256 amount = 0.05e8 * precision / 1e8;
+        uint256 balanceBefore = asset.balanceOf(currentActor);
+        uint256 previewShares = wrapper.previewDeposit(amount);
+
+        uint256 shares = wrapper.deposit(amount, currentActor);
+        uint256 balanceAfter = asset.balanceOf(currentActor);
+
+        assertEq(previewShares, shares, "Deposit Shares");
+        assertLe(amount - (balanceBefore - balanceAfter), 1e10, "Deposit Amount");
+
+        totalShares += shares;
+    }
+
     // function mint(uint256 actorIndexSeed) useActor(actorIndexSeed, false) public {
     // }
     // function withdraw(uint256 actorIndexSeed) useActor(actorIndexSeed, false) public {
