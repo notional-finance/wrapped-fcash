@@ -116,6 +116,10 @@ contract TestWrapperERC4626 is BaseTest {
         vm.expectRevert("fCash matured");
         w.deposit(1e8, LENDER);
     }
+
+    // function test_totalAssets_NotAffectedByPrimeCashDonation() public {}
+    // function test_convertToShares_NoChangeAfterTrade() public {}
+    // function test_convertToAssets_NoChangeAfterTrade() public {}
 }
 
 /*
@@ -137,13 +141,8 @@ contract TestMintAndRedeemAtZeroInterest is BaseTest {
 }
 
 contract TestWrapperValuation is BaseTest {
-    function test_totalAssets_NotAffectedByPrimeCashDonation() public {}
-
-    function test_totalAssets() public {}
     function test_convertToShares_NoChangeAfterTrade() public {}
     function test_convertToAssets_NoChangeAfterTrade() public {}
-
-    function test_totalAssets_PostMaturity() public {}
     function test_convertToShares_PostMaturity() public {}
     function test_convertToAssets_PostMaturity() public {}
 }
