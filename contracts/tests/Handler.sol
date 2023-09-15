@@ -20,6 +20,12 @@ contract Handler is Test {
 
     constructor(wfCashERC4626 _wrapper) {
         wrapper = _wrapper;
+
+        actors[0] = makeAddr("ACTOR_1");
+        actors[1] = makeAddr("ACTOR_2");
+        actors[2] = makeAddr("ACTOR_3");
+        actors[3] = makeAddr("ACTOR_4");
+        actors[4] = makeAddr("ACTOR_5");
     }
 
     modifier useActor(uint256 actorIndexSeed, bool approveToken) {
@@ -78,10 +84,27 @@ contract Handler is Test {
         PortfolioAsset[] memory assets = NOTIONAL.getAccountPortfolio(currentActor);
         assertEq(assets.length, 0);
         assertEq(wrapper.balanceOf(currentActor), fCashAmount);
+
+        totalShares += fCashAmount;
     }
 
-    // function redeemViaERC1155(uint256 actorIndexSeed) useActor(actorIndexSeed, false) public {
-    // }
+    function redeemViaERC1155(uint256 actorIndexSeed, uint256 redeemShare) useActor(actorIndexSeed, false) public {
+        redeemShare = bound(redeemShare, 1, 100);
+        mintViaERC1155(actorIndexSeed);
+        uint256 balance = wrapper.balanceOf(currentActor);
+        uint256 redeemAmount = balance * redeemShare / 100;
+
+        wrapper.redeem(redeemAmount, IWrappedfCash.RedeemOpts({
+            redeemToUnderlying: false,
+            transferfCash: true,
+            receiver: currentActor,
+            maxImpliedRate: 0
+        }));
+
+        assertEq(wrapper.balanceOf(currentActor), balance - redeemAmount);
+        assertEq(NOTIONAL.balanceOf(currentActor, fCashId), redeemAmount);
+        totalShares -= redeemAmount;
+    }
 
     // function deposit(uint256 actorIndexSeed) useActor(actorIndexSeed, false) public {
     // }

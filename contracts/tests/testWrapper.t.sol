@@ -108,7 +108,7 @@ contract TestWrapperERC1155 is BaseTest {
 
         vm.expectRevert();
         w.redeem(balance, IWrappedfCash.RedeemOpts({
-            redeemToUnderlying: true,
+            redeemToUnderlying: false,
             transferfCash: true,
             receiver: LENDER,
             maxImpliedRate: 0

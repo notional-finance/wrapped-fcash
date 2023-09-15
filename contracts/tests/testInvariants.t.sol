@@ -13,6 +13,7 @@ contract TestInvariants is BaseTest {
         super.setUp();
         wrapper = wfCashERC4626(factory.deployWrapper(ETH, maturity_3mo));
         handler = new Handler(wrapper);
+        targetContract(address(handler));
     }
 
     /// forge-config: default.invariant.fail-on-revert = true

@@ -195,7 +195,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         RedeemOpts memory opts
     ) internal nonReentrant {
         require(opts.receiver != address(0), "Receiver is zero address");
-        require(opts.redeemToUnderlying);
+        require(opts.redeemToUnderlying || opts.transferfCash);
         // This will validate that the account has sufficient tokens to burn and make
         // any relevant underlying stateful changes to balances.
         super._burn(from, amount);
