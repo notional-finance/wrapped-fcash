@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 import "../wfCashERC4626.sol";
 import "../../interfaces/notional/IWrappedfCashFactory.sol";
 
-contract Handler is Test {
+contract BaseHandler is Test {
     uint16 constant ETH = 1;
     WETH9 constant WETH = WETH9(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
     INotionalV2 constant NOTIONAL = INotionalV2(0x1344A36A1B56144C3Bc62E7757377D288fDE0369);
@@ -43,6 +43,11 @@ contract Handler is Test {
         _;
         vm.stopPrank();
     }
+}
+
+contract Handler is BaseHandler {
+
+    constructor(wfCashERC4626 _wrapper) BaseHandler(_wrapper) {}
 
     function _mintViaERC1155(uint256 fCashAmount) internal {
         uint16 currencyId = wrapper.getCurrencyId();
