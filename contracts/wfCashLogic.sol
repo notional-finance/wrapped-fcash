@@ -108,11 +108,11 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     /// this is the correct fCash and then mint the corresponding amount of wrapped fCash tokens
     /// back to the user.
     function onERC1155Received(
-        address _operator,
+        address /* _operator */,
         address _from,
         uint256 _id,
         uint256 _value,
-        bytes calldata _data
+        bytes calldata /* _data */
     ) external nonReentrant returns (bytes4) {
         uint256 fCashID = getfCashId();
         // Only accept erc1155 transfers from NotionalV2
@@ -133,13 +133,6 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 assets[0].maturity,
                 assets[0].assetType) == fCashID
         );
-
-        // Update per account fCash balance, calldata from the ERC1155 call is
-        // passed via the ERC777 interface.
-        bytes memory userData;
-        bytes memory operatorData;
-        if (_operator == _from) userData = _data;
-        else operatorData = _data;
 
         // Mint ERC20 tokens for the sender
         _mint(_from, _value);

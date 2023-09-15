@@ -30,7 +30,7 @@ abstract contract BaseTest is Test {
     uint16 constant USDC = 3;
     uint40 maturity;
 
-    function setUp() public {
+    function setUp() public virtual {
         vm.createSelectFork(ARBITRUM_RPC_URL, ARBITRUM_FORK_BLOCK);
         impl = new wfCashERC4626(NOTIONAL, WETH);
         beacon = new nUpgradeableBeacon(address(impl));
@@ -40,4 +40,3 @@ abstract contract BaseTest is Test {
         wrapper = wfCashERC4626(factory.deployWrapper(DAI, maturity));
     }
 }
-    

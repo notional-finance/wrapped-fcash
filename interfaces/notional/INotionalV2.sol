@@ -109,6 +109,14 @@ interface INotionalV2 {
         bytes calldata data
     ) external payable;
 
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] calldata id,
+        uint256[] calldata amount,
+        bytes calldata data
+    ) external payable;
+
     function settleAccount(address account) external;
 
     function withdraw(
