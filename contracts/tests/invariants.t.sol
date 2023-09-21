@@ -18,14 +18,7 @@ abstract contract BaseInvariant is BaseTest {
 
 }
 
-contract InvariantActive is BaseInvariant {
-    function setUp() public override {
-        super.setUp();
-        wrapper = wfCashERC4626(factory.deployWrapper(ETH, maturity_3mo));
-        handler = new ActiveHandler(wrapper);
-        targetContract(address(handler));
-    }
-
+abstract contract InvariantActive is BaseInvariant {
     /// forge-config: default.invariant.runs = 10
     /// forge-config: default.invariant.depth = 4
     /// forge-config: default.invariant.fail-on-revert = true
@@ -50,11 +43,32 @@ contract InvariantActive is BaseInvariant {
     }
 }
 
+contract InvariantActiveDepositMint is InvariantActive {
+    function setUp() public override {
+        super.setUp();
+        wrapper = wfCashERC4626(factory.deployWrapper(ETH, maturity_3mo));
+        handler = new DepositMintHandler(wrapper);
+        targetContract(address(handler));
+    }
+}
+
+contract InvariantActiveRedeemWithdraw is InvariantActive {
+    function setUp() public override {
+        super.setUp();
+        wrapper = wfCashERC4626(factory.deployWrapper(ETH, maturity_3mo));
+        handler = new RedeemWithdrawHandler(wrapper);
+        targetContract(address(handler));
+    }
+}
+
 contract InvariantMatured is BaseInvariant {
     function setUp() public override {
         super.setUp();
         wrapper = wfCashERC4626(factory.deployWrapper(ETH, maturity_3mo));
-        handler = new MaturedHandler(wrapper);
+        handler = new RedeemWithdrawHandler(wrapper);
+
+        vm.warp(maturity_3mo);
+        NOTIONAL.initializeMarkets(ETH, false);
         targetContract(address(handler));
     }
 }

@@ -45,7 +45,7 @@ contract BaseHandler is Test {
     }
 }
 
-contract ActiveHandler is BaseHandler {
+contract DepositMintHandler is BaseHandler {
 
     constructor(wfCashERC4626 _wrapper) BaseHandler(_wrapper) {}
 
@@ -97,25 +97,6 @@ contract ActiveHandler is BaseHandler {
         _mintViaERC1155(0.05e8);
     }
 
-    function redeemViaERC1155(uint256 actorIndexSeed, uint256 redeemShare) useActor(actorIndexSeed, false) public {
-        redeemShare = bound(redeemShare, 1, 100);
-        _mintViaERC1155(0.05e8);
-        uint256 balance = wrapper.balanceOf(currentActor);
-        uint256 notionalBefore = NOTIONAL.balanceOf(currentActor, fCashId);
-        uint256 redeemAmount = balance * redeemShare / 100;
-
-        wrapper.redeem(redeemAmount, IWrappedfCash.RedeemOpts({
-            redeemToUnderlying: false,
-            transferfCash: true,
-            receiver: currentActor,
-            maxImpliedRate: 0
-        }));
-
-        assertEq(wrapper.balanceOf(currentActor), balance - redeemAmount, "Wrapper Balance");
-        assertEq(NOTIONAL.balanceOf(currentActor, fCashId), notionalBefore + redeemAmount, "Notional Balance");
-        totalShares -= redeemAmount;
-    }
-
     function deposit(uint256 actorIndexSeed, uint256 receiverIndex) useActor(actorIndexSeed, true) public {
         receiverIndex = bound(receiverIndex, 0, actors.length - 1);
         address receiver = actors[receiverIndex];
@@ -157,82 +138,14 @@ contract ActiveHandler is BaseHandler {
 
         totalShares += shares;
     }
-
-    function withdraw(
-        uint256 actorIndexSeed,
-        uint256 receiverIndex,
-        uint256 redeemShare
-    ) useActor(actorIndexSeed, true) public {
-        receiverIndex = bound(receiverIndex, 0, actors.length - 1);
-        address receiver = actors[receiverIndex];
-
-        uint256 initialShares = 0.05e8;
-        wrapper.mint(initialShares, currentActor);
-        totalShares += initialShares;
-        redeemShare = bound(redeemShare, 1, 100);
-
-        uint256 maxWithdraw = wrapper.maxWithdraw(currentActor);
-        uint256 assets = maxWithdraw * redeemShare / 100;
-
-        uint256 assetsBefore = asset.balanceOf(receiver);
-        uint256 sharesBefore = wrapper.balanceOf(currentActor);
-        uint256 previewValue = wrapper.previewWithdraw(assets);
-
-        uint256 shares = wrapper.withdraw(assets, receiver, currentActor);
-
-        uint256 assetsAfter = asset.balanceOf(receiver);
-        uint256 sharesAfter = wrapper.balanceOf(currentActor);
-
-        assertEq(previewValue, shares, "Withdraw Preview");
-        assertEq(sharesBefore - sharesAfter, shares, "Withdraw Shares");
-        // NOTE: this is a bit short...
-        assertLe(assets - (assetsAfter - assetsBefore), 5e10, "Withdraw Amount");
-
-        totalShares -= shares;
-    }
-
-    function redeem(
-        uint256 actorIndexSeed,
-        uint256 receiverIndex,
-        uint256 redeemShare
-    ) useActor(actorIndexSeed, true) public {
-        receiverIndex = bound(receiverIndex, 0, actors.length - 1);
-        address receiver = actors[receiverIndex];
-
-        uint256 initialShares = 0.05e8;
-        wrapper.mint(initialShares, currentActor);
-        totalShares += initialShares;
-        redeemShare = bound(redeemShare, 1, 100);
-
-        uint256 maxRedeem = wrapper.maxRedeem(currentActor);
-        uint256 shares = maxRedeem * redeemShare / 100;
-
-        uint256 assetsBefore = asset.balanceOf(receiver);
-        uint256 sharesBefore = wrapper.balanceOf(currentActor);
-        uint256 previewValue = wrapper.previewRedeem(shares);
-
-        uint256 assets = wrapper.redeem(shares, receiver, currentActor);
-
-        uint256 assetsAfter = asset.balanceOf(receiver);
-        uint256 sharesAfter = wrapper.balanceOf(currentActor);
-
-        assertEq(previewValue, assets, "Redeem Preview");
-        assertEq(sharesBefore - sharesAfter, shares, " Redeem Shares");
-        // NOTE: this is a bit short...
-        assertLe(assets - (assetsAfter - assetsBefore), 1e10, " Redeem Amount");
-
-        totalShares -= shares;
-    }
 }
 
-contract MaturedHandler is BaseHandler {
+contract RedeemWithdrawHandler is BaseHandler {
     constructor(wfCashERC4626 _wrapper) BaseHandler(_wrapper) {
         // NOTE: wrappers always use WETH
         asset = IERC20Metadata(wrapper.asset());
         precision = 10 ** asset.decimals();
         fCashId = wrapper.getfCashId();
-        uint256 maturity = wrapper.getMaturity();
-        uint16 currencyId = wrapper.getCurrencyId();
 
         // All actors mint some shares prior to maturity
         for (uint256 i; i < actors.length; i++) {
@@ -244,8 +157,6 @@ contract MaturedHandler is BaseHandler {
         }
 
         totalShares = wrapper.totalSupply();
-        vm.warp(maturity);
-        NOTIONAL.initializeMarkets(currencyId, false);
     }
 
     function redeem(
@@ -306,4 +217,23 @@ contract MaturedHandler is BaseHandler {
 
         totalShares -= shares;
     }
+
+    function redeemViaERC1155(uint256 actorIndexSeed, uint256 redeemShare) useActor(actorIndexSeed, false) public {
+        redeemShare = bound(redeemShare, 1, 100);
+        uint256 balance = wrapper.balanceOf(currentActor);
+        uint256 notionalBefore = NOTIONAL.balanceOf(currentActor, fCashId);
+        uint256 redeemAmount = balance * redeemShare / 100;
+
+        wrapper.redeem(redeemAmount, IWrappedfCash.RedeemOpts({
+            redeemToUnderlying: false,
+            transferfCash: true,
+            receiver: currentActor,
+            maxImpliedRate: 0
+        }));
+
+        assertEq(wrapper.balanceOf(currentActor), balance - redeemAmount, "Wrapper Balance");
+        assertEq(NOTIONAL.balanceOf(currentActor, fCashId), notionalBefore + redeemAmount, "Notional Balance");
+        totalShares -= redeemAmount;
+    }
+
 }
