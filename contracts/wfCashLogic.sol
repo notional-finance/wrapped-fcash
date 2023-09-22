@@ -2,6 +2,7 @@
 pragma solidity 0.8.15;
 pragma experimental ABIEncoderV2;
 
+import "forge-std/console.sol";
 import "./wfCashBase.sol";
 import "@openzeppelin-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
 
@@ -28,14 +29,16 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         address receiver,
         uint32 minImpliedRate
     ) external override {
-        _mintInternal(depositAmountExternal, fCashAmount, receiver, minImpliedRate);
+        (/* */, uint256 maxFCash) = getTotalFCashAvailable();
+        _mintInternal(depositAmountExternal, fCashAmount, receiver, minImpliedRate, maxFCash);
     }
 
     function _mintInternal(
         uint256 depositAmountExternal,
         uint88 fCashAmount,
         address receiver,
-        uint32 minImpliedRate
+        uint32 minImpliedRate,
+        uint256 maxFCash
     ) internal nonReentrant {
         require(!hasMatured(), "fCash matured");
         (IERC20 token, bool isETH, bool hasTransferFee, uint256 precision) = _getTokenForMintInternal();
@@ -45,12 +48,13 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
         uint256 msgValue;
 
-        (/* */, uint256 maxFCash) = getTotalFCashAvailable();
         if (maxFCash < fCashAmount) {
             // NOTE: lending at zero
             uint256 fCashAmountExternal = fCashAmount * precision / uint256(Constants.INTERNAL_TOKEN_PRECISION);
             require(fCashAmountExternal <= depositAmountExternal);
 
+            // Transfers tokens in for lending, Notional will transfer from this contract.
+            token.safeTransferFrom(msg.sender, address(this), fCashAmountExternal);
             NotionalV2.depositUnderlyingToken(address(this), getCurrencyId(), fCashAmountExternal);
         } else if (isETH || hasTransferFee) {
             // If dealing in ETH, we use WETH in the wrapper instead of ETH. NotionalV2 uses

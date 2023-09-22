@@ -212,19 +212,26 @@ contract TestWrapperERC4626 is BaseTest {
 
     function test_lendAboveMaxFCash() public {
         (uint256 totalfCash, uint256 maxFCash) = w.getTotalFCashAvailable();
-        deal(address(asset), LENDER, totalfCash * 2 * precision / 1e8, true);
+        deal(address(asset), LENDER, totalfCash * 5 * precision / 1e8, true);
 
         asset.approve(address(w), type(uint256).max);
-        w.mint(maxFCash * 2, LENDER);
+        uint256 shares = maxFCash * 2;
+        w.mint(shares, LENDER);
 
         (/* */, uint256 maxFCashAfter) = w.getTotalFCashAvailable();
-        assertEq(maxFCashAfter, 0);
+        assertEq(maxFCashAfter, maxFCash);
 
-        IERC20 pCash = IERC20(NOTIONAL.pCashAddress(w.getCurrencyId()));
-        PortfolioAsset[] memory assets = NOTIONAL.getAccountPortfolio(address(w));
+        (int256 cashBalance, uint256 fCash) = w.getBalances();
+        int256 cashBalanceInUnderlying = NOTIONAL.convertCashBalanceToExternal(
+            w.getCurrencyId(),
+            cashBalance,
+            true
+        );
 
-        assertEq(uint256(assets[0].notional), 0, "fCash Balance");
-        assertEq(pCash.balanceOf(address(w)), 0, "pCash Balance");
+        assertEq(shares, w.totalSupply());
+        assertEq(shares, w.balanceOf(LENDER));
+        assertEq(fCash, 0, "fCash Balance");
+        assertAbsDiff(uint256(cashBalanceInUnderlying), shares * 1e10, 1e10, "pCash Balance");
     }
 }
 

@@ -41,6 +41,6 @@ abstract contract BaseTest is Test {
 
     function assertAbsDiff(uint256 a, uint256 b, uint256 diff, string memory m) internal {
         uint256 d = a > b ? a - b : b - a;
-        assertLt(d, diff, m);
+        assertLe(d, diff, m);
     }
 }

@@ -72,44 +72,57 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     }
 
     /** @dev See {IERC4626-previewDeposit} */
-    function previewDeposit(uint256 assets) public view override returns (uint256) {
-        if (hasMatured()) {
-            return 0;
-        } else {
-            // This is how much fCash received from depositing assets
-            (uint16 currencyId, uint40 maturity) = getDecodedID();
-            (uint256 fCashAmount, /* */, /* */) = NotionalV2.getfCashLendFromDeposit(
-                currencyId,
-                assets,
-                maturity,
-                0,
-                block.timestamp,
-                true
-            );
+    function _previewDeposit(uint256 assets) internal view returns (uint256 shares, uint256 maxFCash) {
+        if (hasMatured()) return (0, 0);
+        // This is how much fCash received from depositing assets
+        (uint16 currencyId, uint40 maturity) = getDecodedID();
+        (/* */, maxFCash) = getTotalFCashAvailable();
 
-            return fCashAmount;
+        try NotionalV2.getfCashLendFromDeposit(
+            currencyId,
+            assets,
+            maturity,
+            0,
+            block.timestamp,
+            true
+        ) returns (uint88 s, uint8, bytes32) {
+            shares = s;
+        } catch {
+            shares = maxFCash;
         }
     }
 
+    function previewDeposit(uint256 assets) public view override returns (uint256 shares) {
+        (shares, /* */) = _previewDeposit(assets);
+    }
+
     /** @dev See {IERC4626-previewMint} */
-    function previewMint(uint256 shares) public view override returns (uint256) {
-        if (hasMatured()) {
-            return 0;
+    function _previewMint(uint256 shares) internal view returns (uint256 assets, uint256 maxFCash) {
+        if (hasMatured()) return (0, 0);
+
+        // This is how much fCash received from depositing assets
+        (uint16 currencyId, uint40 maturity) = getDecodedID();
+        (/* */, maxFCash) = getTotalFCashAvailable();
+        if (maxFCash < shares) {
+            (/* */, int256 precision) = getUnderlyingToken();
+            require(precision > 0);
+            // Lending at zero interest means that 1 fCash unit is equivalent to 1 asset unit
+            assets = shares * uint256(precision) / uint256(Constants.INTERNAL_TOKEN_PRECISION);
         } else {
-            // This is how much fCash received from depositing assets
-            (uint16 currencyId, uint40 maturity) = getDecodedID();
             // This method will round up when calculating the depositAmountUnderlying (happens inside
             // CalculationViews._convertToAmountExternal).
-            (uint256 depositAmountUnderlying, /* */, /* */, /* */) = NotionalV2.getDepositFromfCashLend(
+            (assets, /* */, /* */, /* */) = NotionalV2.getDepositFromfCashLend(
                 currencyId,
                 shares,
                 maturity,
                 0,
                 block.timestamp
             );
-
-            return depositAmountUnderlying;
         }
+    }
+
+    function previewMint(uint256 shares) public view override returns (uint256 assets) {
+        (assets, /* */) = _previewMint(shares);
     }
 
     /** @dev See {IERC4626-previewWithdraw} */
@@ -156,18 +169,18 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4626-deposit} */
     function deposit(uint256 assets, address receiver) external override returns (uint256) {
-        uint256 shares = previewDeposit(assets);
+        (uint256 shares, uint256 maxFCash) = _previewDeposit(assets);
         // Will revert if matured
-        _mintInternal(assets, _safeUint88(shares), receiver, 0);
+        _mintInternal(assets, _safeUint88(shares), receiver, 0, maxFCash);
         emit Deposit(msg.sender, receiver, assets, shares);
         return shares;
     }
 
     /** @dev See {IERC4626-mint} */
     function mint(uint256 shares, address receiver) external override returns (uint256) {
-        uint256 assets = previewMint(shares);
+        (uint256 assets, uint256 maxFCash) = _previewMint(shares);
         // Will revert if matured
-        _mintInternal(assets, _safeUint88(shares), receiver, 0);
+        _mintInternal(assets, _safeUint88(shares), receiver, 0, maxFCash);
         emit Deposit(msg.sender, receiver, assets, shares);
         return assets;
     }
