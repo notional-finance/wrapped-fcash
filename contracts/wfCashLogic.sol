@@ -45,8 +45,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
         uint256 msgValue;
 
-        uint256 totalfCash = getTotalFCashAvailable();
-        if (totalfCash <= fCashAmount) {
+        (/* */, uint256 maxFCash) = getTotalFCashAvailable();
+        if (maxFCash < fCashAmount) {
             // NOTE: lending at zero
             uint256 fCashAmountExternal = fCashAmount * precision / uint256(Constants.INTERNAL_TOKEN_PRECISION);
             require(fCashAmountExternal <= depositAmountExternal);

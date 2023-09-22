@@ -16,6 +16,13 @@ import "@openzeppelin-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
     using SafeERC20 for IERC20;
 
+    // This is the empirically measured maximum amount of fCash that can be lent. Lending
+    // the fCashAmount down to zero is not possible due to rounding errors and fees inside
+    // the liquidity curve.
+    uint256 internal constant MAX_LEND_LIMIT = 1e9 - 50;
+    // Below this absolute number we consider the max fcash to be zero
+    uint256 internal constant MIN_FCASH_FLOOR = 50_000;
+
     /// @notice address to the NotionalV2 system
     INotionalV2 public immutable NotionalV2;
     WETH9 public immutable WETH;
@@ -142,16 +149,19 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         isETH = address(token) == Constants.ETH_ADDRESS;
     }
 
-    function getTotalFCashAvailable() public view returns (uint256) {
+    function getTotalFCashAvailable() public view returns (uint256, uint256) {
         uint8 marketIndex = getMarketIndex();
-        if (marketIndex == 0) return 0;
+        if (marketIndex == 0) return (0, 0);
         MarketParameters[] memory markets = NotionalV2.getActiveMarkets(getCurrencyId());
         require(marketIndex <= markets.length);
 
         int256 totalfCash = markets[marketIndex - 1].totalfCash;
         require(totalfCash > 0);
 
-        return uint256(totalfCash);
+        uint256 maxFCash = uint256(totalfCash) * MAX_LEND_LIMIT / 1e9;
+        if (maxFCash < MIN_FCASH_FLOOR) maxFCash = 0;
+
+        return (uint256(totalfCash), maxFCash);
     }
 
     function getBalances() public view returns (int256 cashBalance, uint256 fCashBalance) {

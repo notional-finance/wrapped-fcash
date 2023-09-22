@@ -192,6 +192,40 @@ contract TestWrapperERC4626 is BaseTest {
         assertEq(shareValueBefore, shareValueAfter, "Share Value Change");
         assertAbsDiff(assetValueAfter, assetValueBefore, 1e10, "Asset Value Change");
     }
+
+    function test_lendToMaxFCash() public {
+        (uint256 totalfCash, uint256 maxFCash) = w.getTotalFCashAvailable();
+        deal(address(asset), LENDER, totalfCash * precision / 1e8, true);
+
+        asset.approve(address(w), type(uint256).max);
+        w.mint(maxFCash, LENDER);
+
+        (/* */, uint256 maxFCashAfter) = w.getTotalFCashAvailable();
+        assertEq(maxFCashAfter, 0);
+
+        IERC20 pCash = IERC20(NOTIONAL.pCashAddress(w.getCurrencyId()));
+        PortfolioAsset[] memory assets = NOTIONAL.getAccountPortfolio(address(w));
+
+        assertEq(uint256(assets[0].notional), maxFCash, "fCash Balance");
+        assertEq(pCash.balanceOf(address(w)), 0, "pCash Balance");
+    }
+
+    function test_lendAboveMaxFCash() public {
+        (uint256 totalfCash, uint256 maxFCash) = w.getTotalFCashAvailable();
+        deal(address(asset), LENDER, totalfCash * 2 * precision / 1e8, true);
+
+        asset.approve(address(w), type(uint256).max);
+        w.mint(maxFCash * 2, LENDER);
+
+        (/* */, uint256 maxFCashAfter) = w.getTotalFCashAvailable();
+        assertEq(maxFCashAfter, 0);
+
+        IERC20 pCash = IERC20(NOTIONAL.pCashAddress(w.getCurrencyId()));
+        PortfolioAsset[] memory assets = NOTIONAL.getAccountPortfolio(address(w));
+
+        assertEq(uint256(assets[0].notional), 0, "fCash Balance");
+        assertEq(pCash.balanceOf(address(w)), 0, "pCash Balance");
+    }
 }
 
 /*
