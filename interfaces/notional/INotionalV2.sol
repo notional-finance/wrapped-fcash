@@ -144,4 +144,6 @@ interface INotionalV2 {
     function balanceOf(address account, uint256 id) external view returns (uint256);
 
     function initializeMarkets(uint16 currencyId, bool isFirstInit) external;
+
+    function pCashAddress(uint16 currencyId) external view returns (address);
 }

@@ -20,7 +20,7 @@ abstract contract BaseTest is Test {
     IWrappedfCashFactory factory;
 
     string ARBITRUM_RPC_URL = vm.envString("ARBITRUM_RPC_URL");
-    uint256 ARBITRUM_FORK_BLOCK = vm.envUint("ARBITRUM_FORK_BLOCK");
+    uint256 ARBITRUM_FORK_BLOCK = 133312145;
 
     event WrapperDeployed(uint16 currencyId, uint40 maturity, address wrapper);
 
@@ -37,5 +37,10 @@ abstract contract BaseTest is Test {
         factory = new WrappedfCashFactory(address(beacon));
         maturity_3mo = uint40(NOTIONAL.getActiveMarkets(ETH)[0].maturity);
         maturity_6mo = uint40(NOTIONAL.getActiveMarkets(ETH)[1].maturity);
+    }
+
+    function assertAbsDiff(uint256 a, uint256 b, uint256 diff, string memory m) internal {
+        uint256 d = a > b ? a - b : b - a;
+        assertLt(d, diff, m);
     }
 }
