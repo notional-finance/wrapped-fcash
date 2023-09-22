@@ -127,6 +127,8 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4626-previewWithdraw} */
     function previewWithdraw(uint256 assets) public view override returns (uint256 shares) {
+        if (assets == 0) return 0;
+
         // Although the ERC4626 standard suggests that shares is rounded up in this calculation,
         // it would not have much of an effect for wrapped fCash in practice. The actual amount
         // of assets returned to the user is not dictated by the `assets` parameter supplied here
@@ -152,6 +154,8 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4626-previewRedeem} */
     function previewRedeem(uint256 shares) public view override returns (uint256 assets) {
+        if (shares == 0) return 0;
+
         if (hasMatured()) {
             assets = convertToAssets(shares);
         } else {

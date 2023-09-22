@@ -221,10 +221,10 @@ contract TestWrapperERC4626 is BaseTest {
         (/* */, uint256 maxFCashAfter) = w.getTotalFCashAvailable();
         assertEq(maxFCashAfter, maxFCash);
 
-        (int256 cashBalance, uint256 fCash) = w.getBalances();
+        (uint256 cashBalance, uint256 fCash) = w.getBalances();
         int256 cashBalanceInUnderlying = NOTIONAL.convertCashBalanceToExternal(
             w.getCurrencyId(),
-            cashBalance,
+            int256(cashBalance),
             true
         );
 
@@ -234,17 +234,3 @@ contract TestWrapperERC4626 is BaseTest {
         assertAbsDiff(uint256(cashBalanceInUnderlying), shares * 1e10, 1e10, "pCash Balance");
     }
 }
-
-/*
-contract TestMintAndRedeemAtZeroInterest is BaseTest {
-    function test_Mint() public {}
-    function test_Deposit() public {}
-
-    function test_Withdraw_WhenSufficientFCash() public {}
-    function test_Redeem_WhenSufficientFCash() public {}
-    function test_Withdraw_InsufficientFCash() public {}
-    function test_Redeem_InsufficientFCash() public {}
-    function test_Withdraw_PostMaturity() public {}
-    function test_Redeem_PostMaturity() public {}
-}
-*/

@@ -24,7 +24,30 @@ abstract contract InvariantActive is BaseInvariant {
     /// forge-config: default.invariant.fail-on-revert = true
     function invariant_fCashSupply() external {
         uint256 fCashId = wrapper.getfCashId();
-        assertEq(NOTIONAL.balanceOf(address(wrapper), fCashId), wrapper.totalSupply(), "Wrapper Balance");
+        (uint256 cashBalance, uint256 fCash) = wrapper.getBalances();
+        (/* */, int256 precision) = wrapper.getUnderlyingToken();
+        assertEq(fCash, NOTIONAL.balanceOf(address(wrapper), fCashId), "Wrapper fCash Balance");
+
+        if (cashBalance == 0) {
+            assertEq(
+                NOTIONAL.balanceOf(address(wrapper), fCashId),
+                wrapper.totalSupply(),
+                "Wrapper Total Supply"
+            );
+        } else {
+            int256 underlyingBalance = NOTIONAL.convertCashBalanceToExternal(
+                wrapper.getCurrencyId(),
+                int256(cashBalance),
+                true
+            ) * Constants.INTERNAL_TOKEN_PRECISION / precision;
+            require(underlyingBalance >= 0);
+
+            assertGe(
+                uint256(underlyingBalance) + fCash + 1,
+                wrapper.totalSupply(),
+                "Wrapper Total Supply"
+            );
+        }
     }
 
     /// forge-config: default.invariant.runs = 10

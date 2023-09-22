@@ -68,7 +68,7 @@ library EncodeDecode {
         action[0].actionType = DepositActionType.DepositUnderlying;
         action[0].currencyId = currencyId;
         action[0].depositActionAmount = depositAmountExternal;
-        action[0].withdrawEntireCashBalance = true;
+        action[0].withdrawEntireCashBalance = false;
         action[0].redeemToUnderlying = true;
         action[0].trades = new bytes32[](1);
         action[0].trades[0] = bytes32(
@@ -88,7 +88,7 @@ library EncodeDecode {
         action = new BalanceActionWithTrades[](1);
         action[0].actionType = DepositActionType.None;
         action[0].currencyId = currencyId;
-        action[0].withdrawEntireCashBalance = true;
+        action[0].withdrawEntireCashBalance = false;
         action[0].redeemToUnderlying = true;
         action[0].trades = new bytes32[](1);
         action[0].trades[0] = bytes32(

@@ -164,8 +164,12 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         return (uint256(totalfCash), maxFCash);
     }
 
-    function getBalances() public view returns (int256 cashBalance, uint256 fCashBalance) {
-        (cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(getCurrencyId(), address(this));
+    function getBalances() public view returns (uint256 cashBalance, uint256 fCashBalance) {
+        (int256 cash, /* */, /* */) = NotionalV2.getAccountBalance(getCurrencyId(), address(this));
+        // Wrapper can never have a negative cash balance
+        require(cash >= 0);
+
+        cashBalance = uint256(cash);
         fCashBalance = NotionalV2.balanceOf(address(this), _fCashId);
     }
 

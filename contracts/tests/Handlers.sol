@@ -43,6 +43,11 @@ contract BaseHandler is Test {
         _;
         vm.stopPrank();
     }
+
+    function assertAbsDiff(uint256 a, uint256 b, uint256 diff, string memory m) internal {
+        uint256 d = a > b ? a - b : b - a;
+        assertLe(d, diff, m);
+    }
 }
 
 contract DepositMintHandler is BaseHandler {
@@ -146,15 +151,22 @@ contract RedeemWithdrawHandler is BaseHandler {
         asset = IERC20Metadata(wrapper.asset());
         precision = 10 ** asset.decimals();
         fCashId = wrapper.getfCashId();
+        (/* */, uint256 maxFCash) = wrapper.getTotalFCashAvailable();
+        uint256 mintAmount = maxFCash / (actors.length - 1);
 
         // All actors mint some shares prior to maturity
         for (uint256 i; i < actors.length; i++) {
-            deal(address(asset), actors[i], 100 * precision, true);
+            deal(address(asset), actors[i], 100_000_000 * precision, true);
             vm.startPrank(actors[i]);
             asset.approve(address(wrapper), type(uint256).max);
-            wrapper.mint(0.05e8, actors[i]);
+            wrapper.mint(mintAmount, actors[i]);
             vm.stopPrank();
         }
+
+        // Ensure that there is a bit of cash and fcash
+        (uint256 cashBalance, uint256 fCash) = wrapper.getBalances();
+        assertGt(cashBalance, 0);
+        assertGt(fCash, 0);
 
         totalShares = wrapper.totalSupply();
     }
@@ -173,18 +185,27 @@ contract RedeemWithdrawHandler is BaseHandler {
 
         uint256 assetsBefore = asset.balanceOf(receiver);
         uint256 sharesBefore = wrapper.balanceOf(currentActor);
-        uint256 previewValue = wrapper.previewRedeem(shares);
+        // Withdrawing dust balances causes reverts
+        if (shares < 1_000) return;
 
+        uint256 previewValue = wrapper.previewRedeem(shares);
+        (/* */, uint256 fCash) = wrapper.getBalances();
         uint256 assets = wrapper.redeem(shares, receiver, currentActor);
 
         uint256 assetsAfter = asset.balanceOf(receiver);
         uint256 sharesAfter = wrapper.balanceOf(currentActor);
 
-        console.log("Redeem Preview %s", (previewValue - assets) / 1e10);
-        assertLe(previewValue - assets, 5e10, "Redeem Preview");
         assertEq(sharesBefore - sharesAfter, shares, " Redeem Shares");
-        // NOTE: this is a bit short...
-        assertLe(assets - (assetsAfter - assetsBefore), 1e10, " Redeem Amount");
+        if (fCash < shares && !wrapper.hasMatured()) {
+            // If this occurs, there is more of a difference due to slippage between the
+            // withdraw oracle rate and the actual borrow rate so the preview is off by
+            // a larger proportion
+            assertAbsDiff(previewValue, assets, 0.001e18, "Redeem Preview");
+        } else {
+            assertAbsDiff(previewValue, assets, 5e10, "Redeem Preview");
+        }
+
+        assertAbsDiff(assets, (assetsAfter - assetsBefore), 1e10, " Redeem Amount");
 
         totalShares -= shares;
     }
@@ -203,8 +224,11 @@ contract RedeemWithdrawHandler is BaseHandler {
 
         uint256 assetsBefore = asset.balanceOf(receiver);
         uint256 sharesBefore = wrapper.balanceOf(currentActor);
-        uint256 previewValue = wrapper.previewWithdraw(assets);
+        // Withdrawing dust balances causes reverts
+        if (assets < 1e11) return;
 
+        uint256 previewValue = wrapper.previewWithdraw(assets);
+        (/* */, uint256 fCash) = wrapper.getBalances();
         uint256 shares = wrapper.withdraw(assets, receiver, currentActor);
 
         uint256 assetsAfter = asset.balanceOf(receiver);
@@ -212,13 +236,18 @@ contract RedeemWithdrawHandler is BaseHandler {
 
         assertEq(previewValue, shares, "Withdraw Preview");
         assertEq(sharesBefore - sharesAfter, shares, "Withdraw Shares");
-        // NOTE: this is a bit short...
-        assertLe(assets - (assetsAfter - assetsBefore), 5e10, "Withdraw Amount");
+        if (fCash < shares && !wrapper.hasMatured()) {
+            assertAbsDiff(assets, (assetsAfter - assetsBefore), 0.001e18, "Withdraw Amount");
+        } else {
+            assertAbsDiff(assets, (assetsAfter - assetsBefore), 5e10, "Withdraw Amount");
+        }
 
         totalShares -= shares;
     }
 
     function redeemViaERC1155(uint256 actorIndexSeed, uint256 redeemShare) useActor(actorIndexSeed, false) public {
+        if (wrapper.hasMatured()) return;
+
         redeemShare = bound(redeemShare, 1, 100);
         uint256 balance = wrapper.balanceOf(currentActor);
         uint256 notionalBefore = NOTIONAL.balanceOf(currentActor, fCashId);

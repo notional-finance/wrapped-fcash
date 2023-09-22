@@ -2,7 +2,6 @@
 pragma solidity 0.8.15;
 pragma experimental ABIEncoderV2;
 
-import "forge-std/console.sol";
 import "./wfCashBase.sol";
 import "@openzeppelin-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
 
@@ -47,50 +46,32 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         // just like it has asset tokens.
         uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
         uint256 msgValue;
+        uint16 currencyId = getCurrencyId();
+        
+        if (isETH) {
+            // safeTransferFrom not required since WETH is known to be compatible
+            IERC20((address(WETH))).transferFrom(msg.sender, address(this), depositAmountExternal);
+            WETH.withdraw(depositAmountExternal);
+            msgValue = depositAmountExternal;
+        } else {
+            token.safeTransferFrom(msg.sender, address(this), depositAmountExternal);
+            depositAmountExternal = token.balanceOf(address(this)) - balanceBefore;
+        }
 
         if (maxFCash < fCashAmount) {
             // NOTE: lending at zero
             uint256 fCashAmountExternal = fCashAmount * precision / uint256(Constants.INTERNAL_TOKEN_PRECISION);
             require(fCashAmountExternal <= depositAmountExternal);
 
-            // Transfers tokens in for lending, Notional will transfer from this contract.
-            token.safeTransferFrom(msg.sender, address(this), fCashAmountExternal);
-            NotionalV2.depositUnderlyingToken(address(this), getCurrencyId(), fCashAmountExternal);
+            // NOTE: Residual (depositAmountExternal - fCashAmountExternal) will be transferred
+            // back to the account
+            NotionalV2.depositUnderlyingToken{value: msgValue}(address(this), currencyId, fCashAmountExternal);
         } else if (isETH || hasTransferFee) {
-            // If dealing in ETH, we use WETH in the wrapper instead of ETH. NotionalV2 uses
-            // ETH natively but due to pull payment requirements for batchLend, it does not support
-            // ETH. batchLend only supports ERC20 tokens like cETH or aETH. Since the wrapper is a compatibility
-            // layer, it will support WETH so integrators can deal solely in ERC20 tokens. Instead of using
-            // "batchLend" we will use "batchBalanceActionWithTrades". The difference is that "batchLend"
-            // is more gas efficient (does not require an additional redeem call to asset tokens). If using cETH
-            // then everything will proceed via batchLend. Similar logic applies to tokens with transfer fees
-            if (isETH) {
-                // safeTransferFrom not required since WETH is known to be compatible
-                IERC20((address(WETH))).transferFrom(msg.sender, address(this), depositAmountExternal);
-                WETH.withdraw(depositAmountExternal);
-                msgValue = depositAmountExternal;
-            } else {
-                token.safeTransferFrom(msg.sender, address(this), depositAmountExternal);
-                depositAmountExternal = token.balanceOf(address(this)) - balanceBefore;
-            }
-
-            BalanceActionWithTrades[] memory action = EncodeDecode.encodeLegacyLendTrade(
-                getCurrencyId(),
-                getMarketIndex(),
-                depositAmountExternal,
-                fCashAmount,
-                minImpliedRate
-            );
-            // Notional will return any residual ETH as the native token. When we _sendTokensToReceiver those
-            // native ETH tokens will be wrapped back to WETH.
-            NotionalV2.batchBalanceAndTradeAction{value: msgValue}(address(this), action);
+            _lendLegacy(currencyId, depositAmountExternal, fCashAmount, minImpliedRate, msgValue);
         } else {
-            // Transfers tokens in for lending, Notional will transfer from this contract.
-            token.safeTransferFrom(msg.sender, address(this), depositAmountExternal);
-
             // Executes a lending action on Notional
             BatchLend[] memory action = EncodeDecode.encodeLendTrade(
-                getCurrencyId(),
+                currencyId,
                 getMarketIndex(),
                 fCashAmount,
                 minImpliedRate
@@ -106,6 +87,45 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         // lent out. Sending these tokens back to the receiver risks them getting locked on a
         // contract that does not have the capability to transfer them off
         _sendTokensToReceiver(token, msg.sender, isETH, balanceBefore);
+    }
+
+    function _lendLegacy(
+        uint16 currencyId,
+        uint256 depositAmountExternal,
+        uint88 fCashAmount,
+        uint32 minImpliedRate,
+        uint256 msgValue
+    ) internal {
+        // If dealing in ETH, we use WETH in the wrapper instead of ETH. NotionalV2 uses
+        // ETH natively but due to pull payment requirements for batchLend, it does not support
+        // ETH. batchLend only supports ERC20 tokens. Since the wrapper is a compatibility
+        // layer, it will support WETH so integrators can deal solely in ERC20 tokens. Instead of using
+        // "batchLend" we will use "batchBalanceActionWithTrades". The difference is that "batchLend"
+        // is more gas efficient.
+
+        // If deposit amount external is in excess of the cost to purchase fCash amount (often the case),
+        // then we need to return the difference between postTradeCash - preTradeCash. This is done because
+        // the encoded trade does not automatically withdraw the entire cash balance in case the wrapper
+        // is holding a cash balance.
+        (int256 preTradeCash, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
+
+        BalanceActionWithTrades[] memory action = EncodeDecode.encodeLegacyLendTrade(
+            currencyId,
+            getMarketIndex(),
+            depositAmountExternal,
+            fCashAmount,
+            minImpliedRate
+        );
+        // Notional will return any residual ETH as the native token. When we _sendTokensToReceiver those
+        // native ETH tokens will be wrapped back to WETH.
+        NotionalV2.batchBalanceAndTradeAction{value: msgValue}(address(this), action);
+
+        (int256 postTradeCash, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
+
+        if (preTradeCash != postTradeCash) {
+            require(preTradeCash < postTradeCash);
+            NotionalV2.withdraw(currencyId, _safeUint88(uint256(postTradeCash - preTradeCash)), true);
+        }
     }
 
     /// @notice This hook will be called every time this contract receives fCash, will validate that
@@ -258,12 +278,11 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
         uint16 currencyId = getCurrencyId();
 
-        (int256 cashBalance, uint256 fCashBalance) = getBalances();
+        (uint256 initialCashBalance, uint256 fCashBalance) = getBalances();
         uint256 primeCashToWithdraw;
         if (fCashBalance < fCashToSell) {
             (primeCashToWithdraw, /* */) = getPresentCashValue(fCashToSell - fCashBalance);
-            require(0 < cashBalance);
-            require(primeCashToWithdraw <= uint256(cashBalance));
+            require(primeCashToWithdraw <= initialCashBalance);
             fCashToSell = fCashBalance;
         }
 
@@ -276,12 +295,13 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 maxImpliedRate
             );
             NotionalV2.batchBalanceAndTradeAction(address(this), action);
+
+            (int256 postTradeCash, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
+            require(postTradeCash >= 0);
+            primeCashToWithdraw = primeCashToWithdraw + uint256(postTradeCash) - initialCashBalance;
         }
 
-        if (primeCashToWithdraw > 0) {
-            NotionalV2.withdraw(currencyId, _safeUint88(primeCashToWithdraw), true);
-        }
-
+        NotionalV2.withdraw(currencyId, _safeUint88(primeCashToWithdraw), true);
         // Send borrowed cash back to receiver
         tokensTransferred = _sendTokensToReceiver(token, receiver, isETH, balanceBefore);
     }

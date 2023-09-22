@@ -7,4 +7,6 @@ interface WETH9 {
     function withdraw(uint256 wad) external;
 
     function transfer(address dst, uint wad) external returns (bool);
+
+    function balanceOf(address account) external view returns (uint256);
 }
