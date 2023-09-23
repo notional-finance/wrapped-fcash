@@ -10,6 +10,7 @@ contract BaseHandler is Test {
     uint16 constant ETH = 1;
     WETH9 constant WETH = WETH9(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
     INotionalV2 constant NOTIONAL = INotionalV2(0x1344A36A1B56144C3Bc62E7757377D288fDE0369);
+    uint256 constant BASIS_POINT = 1e5;
 
     wfCashERC4626 wrapper;
     address[5] public actors;
@@ -206,7 +207,7 @@ contract RedeemWithdrawHandler is BaseHandler {
             // If this occurs, there is more of a difference due to slippage between the
             // withdraw oracle rate and the actual borrow rate so the preview is off by
             // a larger proportion
-            assertRelDiff(previewValue, assets, 0.0005e9, "Redeem Preview");
+            assertRelDiff(previewValue, assets, 30 * BASIS_POINT, "Redeem Preview");
         } else {
             assertAbsDiff(previewValue, assets, 5e10, "Redeem Preview");
         }
@@ -246,7 +247,7 @@ contract RedeemWithdrawHandler is BaseHandler {
             // If this occurs, there is more of a difference due to slippage between the
             // withdraw oracle rate and the actual borrow rate so the preview is off by
             // a larger proportion
-            assertRelDiff(assets, (assetsAfter - assetsBefore), 0.0005e9, "Withdraw Amount");
+            assertRelDiff(assets, (assetsAfter - assetsBefore), 30 * BASIS_POINT, "Withdraw Amount");
         } else {
             assertAbsDiff(assets, (assetsAfter - assetsBefore), 5e10, "Withdraw Amount");
         }
