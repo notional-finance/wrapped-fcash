@@ -48,6 +48,12 @@ contract BaseHandler is Test {
         uint256 d = a > b ? a - b : b - a;
         assertLe(d, diff, m);
     }
+
+    function assertRelDiff(uint256 a, uint256 b, uint256 rel, string memory m) internal {
+        uint256 d = a > b ? a - b : b - a;
+        uint256 r = d * 1e9 / precision;
+        assertLe(r, rel, m);
+    }
 }
 
 contract DepositMintHandler is BaseHandler {
@@ -200,7 +206,7 @@ contract RedeemWithdrawHandler is BaseHandler {
             // If this occurs, there is more of a difference due to slippage between the
             // withdraw oracle rate and the actual borrow rate so the preview is off by
             // a larger proportion
-            assertAbsDiff(previewValue, assets, 0.001e18, "Redeem Preview");
+            assertRelDiff(previewValue, assets, 0.0005e9, "Redeem Preview");
         } else {
             assertAbsDiff(previewValue, assets, 5e10, "Redeem Preview");
         }
@@ -237,7 +243,10 @@ contract RedeemWithdrawHandler is BaseHandler {
         assertEq(previewValue, shares, "Withdraw Preview");
         assertEq(sharesBefore - sharesAfter, shares, "Withdraw Shares");
         if (fCash < shares && !wrapper.hasMatured()) {
-            assertAbsDiff(assets, (assetsAfter - assetsBefore), 0.001e18, "Withdraw Amount");
+            // If this occurs, there is more of a difference due to slippage between the
+            // withdraw oracle rate and the actual borrow rate so the preview is off by
+            // a larger proportion
+            assertRelDiff(assets, (assetsAfter - assetsBefore), 0.0005e9, "Withdraw Amount");
         } else {
             assertAbsDiff(assets, (assetsAfter - assetsBefore), 5e10, "Withdraw Amount");
         }

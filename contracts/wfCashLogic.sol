@@ -44,7 +44,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         // In this case, the asset token == the underlying token and we should just rewrite the useUnderlying
         // flag to false. The same amount of tokens will be transferred in either case so this method will behave
         // just like it has asset tokens.
-        uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
+        uint256 balanceBefore = isETH ? WETH.balanceOf(address(this)) : token.balanceOf(address(this));
         uint256 msgValue;
         uint16 currencyId = getCurrencyId();
         
@@ -67,7 +67,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
             // back to the account
             NotionalV2.depositUnderlyingToken{value: msgValue}(address(this), currencyId, fCashAmountExternal);
         } else if (isETH || hasTransferFee) {
-            _lendLegacy(currencyId, depositAmountExternal, fCashAmount, minImpliedRate, msgValue);
+            _lendLegacy(currencyId, depositAmountExternal, fCashAmount, minImpliedRate, msgValue, isETH);
         } else {
             // Executes a lending action on Notional
             BatchLend[] memory action = EncodeDecode.encodeLendTrade(
@@ -94,7 +94,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         uint256 depositAmountExternal,
         uint88 fCashAmount,
         uint32 minImpliedRate,
-        uint256 msgValue
+        uint256 msgValue,
+        bool isETH
     ) internal {
         // If dealing in ETH, we use WETH in the wrapper instead of ETH. NotionalV2 uses
         // ETH natively but due to pull payment requirements for batchLend, it does not support
@@ -124,7 +125,11 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
 
         if (preTradeCash != postTradeCash) {
             require(preTradeCash < postTradeCash);
-            NotionalV2.withdraw(currencyId, _safeUint88(uint256(postTradeCash - preTradeCash)), true);
+            NotionalV2.withdraw(
+                currencyId,
+                _safeUint88(uint256(postTradeCash - preTradeCash)),
+                !isETH
+            );
         }
     }
 
@@ -261,9 +266,9 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         uint88 assetInternalCashClaim
     ) private returns (uint256 tokensTransferred) {
         (IERC20 token, bool isETH) = getToken(true);
-        uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
+        uint256 balanceBefore = isETH ? WETH.balanceOf(address(this)) : token.balanceOf(address(this));
 
-        NotionalV2.withdraw(currencyId, assetInternalCashClaim, true);
+        NotionalV2.withdraw(currencyId, assetInternalCashClaim, !isETH);
 
         tokensTransferred = _sendTokensToReceiver(token, receiver, isETH, balanceBefore);
     }
@@ -275,7 +280,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         uint32 maxImpliedRate
     ) private returns (uint256 tokensTransferred) {
         (IERC20 token, bool isETH) = getToken(true);
-        uint256 balanceBefore = isETH ? address(this).balance : token.balanceOf(address(this));
+        uint256 balanceBefore = isETH ? WETH.balanceOf(address(this)) : token.balanceOf(address(this));
         uint16 currencyId = getCurrencyId();
 
         (uint256 initialCashBalance, uint256 fCashBalance) = getBalances();
@@ -301,8 +306,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
             primeCashToWithdraw = primeCashToWithdraw + uint256(postTradeCash) - initialCashBalance;
         }
 
-        NotionalV2.withdraw(currencyId, _safeUint88(primeCashToWithdraw), true);
-        // Send borrowed cash back to receiver
+        // Withdraw the total amount of cash and send it to the receiver
+        NotionalV2.withdraw(currencyId, _safeUint88(primeCashToWithdraw), !isETH);
         tokensTransferred = _sendTokensToReceiver(token, receiver, isETH, balanceBefore);
     }
 
@@ -312,12 +317,10 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         bool isETH,
         uint256 balanceBefore
     ) private returns (uint256 tokensTransferred) {
-        uint256 balanceAfter = isETH ? address(this).balance : token.balanceOf(address(this));
+        uint256 balanceAfter = isETH ? WETH.balanceOf(address(this)) : token.balanceOf(address(this));
         tokensTransferred = balanceAfter - balanceBefore;
 
         if (isETH) {
-            // TODO: we can remove the re-wrap if we use redeemToWETH
-            WETH.deposit{value: tokensTransferred}();
             // No need to use safeTransfer for WETH since it is known to be compatible
             IERC20(address(WETH)).transfer(receiver, tokensTransferred);
         } else if (tokensTransferred > 0) {
