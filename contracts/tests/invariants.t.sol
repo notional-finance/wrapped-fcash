@@ -9,6 +9,14 @@ abstract contract BaseInvariant is BaseTest {
     BaseHandler handler;
     wfCashERC4626 wrapper;
 
+    function getWrapperParams() internal view virtual returns (uint16 currencyId, uint40 maturity);
+
+    function setUp() public virtual override {
+        super.setUp();
+        (uint16 currencyId, uint40 maturity) = getWrapperParams();
+        wrapper = wfCashERC4626(factory.deployWrapper(currencyId, maturity));
+    }
+
     /// forge-config: default.invariant.runs = 10
     /// forge-config: default.invariant.depth = 4
     /// forge-config: default.invariant.fail-on-revert = true
@@ -66,32 +74,83 @@ abstract contract InvariantActive is BaseInvariant {
     }
 }
 
-contract InvariantActiveDepositMint is InvariantActive {
+abstract contract InvariantActiveDepositMint is InvariantActive {
     function setUp() public override {
         super.setUp();
-        wrapper = wfCashERC4626(factory.deployWrapper(ETH, maturity_3mo));
         handler = new DepositMintHandler(wrapper);
         targetContract(address(handler));
     }
 }
 
-contract InvariantActiveRedeemWithdraw is InvariantActive {
+abstract contract InvariantActiveRedeemWithdraw is InvariantActive {
     function setUp() public override {
         super.setUp();
-        wrapper = wfCashERC4626(factory.deployWrapper(ETH, maturity_3mo));
         handler = new RedeemWithdrawHandler(wrapper);
         targetContract(address(handler));
     }
 }
 
-contract InvariantMatured is BaseInvariant {
+abstract contract InvariantMatured is BaseInvariant {
     function setUp() public override {
         super.setUp();
-        wrapper = wfCashERC4626(factory.deployWrapper(ETH, maturity_3mo));
         handler = new RedeemWithdrawHandler(wrapper);
 
         vm.warp(maturity_3mo);
         NOTIONAL.initializeMarkets(ETH, false);
         targetContract(address(handler));
+    }
+}
+
+contract Invariant_ETH_3mo_DepositMint is InvariantActiveDepositMint {
+    function getWrapperParams() internal view override returns (uint16, uint40) {
+        return (ETH, maturity_3mo);
+    }
+}
+
+contract Invariant_ETH_3mo_RedeemWithdraw is InvariantActiveRedeemWithdraw {
+    function getWrapperParams() internal view override returns (uint16, uint40) {
+        return (ETH, maturity_3mo);
+    }
+}
+
+contract Invariant_ETH_3mo_Matured is InvariantMatured {
+    function getWrapperParams() internal view override returns (uint16, uint40) {
+        return (ETH, maturity_3mo);
+    }
+}
+
+contract Invariant_DAI_3mo_DepositMint is InvariantActiveDepositMint {
+    function getWrapperParams() internal view override returns (uint16, uint40) {
+        return (DAI, maturity_3mo);
+    }
+}
+
+contract Invariant_DAI_3mo_RedeemWithdraw is InvariantActiveRedeemWithdraw {
+    function getWrapperParams() internal view override returns (uint16, uint40) {
+        return (DAI, maturity_3mo);
+    }
+}
+
+contract Invariant_DAI_3mo_Matured is InvariantMatured {
+    function getWrapperParams() internal view override returns (uint16, uint40) {
+        return (DAI, maturity_3mo);
+    }
+}
+
+contract Invariant_USDC_3mo_DepositMint is InvariantActiveDepositMint {
+    function getWrapperParams() internal view override returns (uint16, uint40) {
+        return (USDC, maturity_3mo);
+    }
+}
+
+contract Invariant_USDC_3mo_RedeemWithdraw is InvariantActiveRedeemWithdraw {
+    function getWrapperParams() internal view override returns (uint16, uint40) {
+        return (USDC, maturity_3mo);
+    }
+}
+
+contract Invariant_USDC_3mo_Matured is InvariantMatured {
+    function getWrapperParams() internal view override returns (uint16, uint40) {
+        return (USDC, maturity_3mo);
     }
 }

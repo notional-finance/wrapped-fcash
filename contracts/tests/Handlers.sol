@@ -17,6 +17,7 @@ contract BaseHandler is Test {
     address internal currentActor;
     uint256 public totalShares;
     uint256 public precision;
+    uint256 public roundingPrecision;
     uint256 public fCashId;
     IERC20Metadata public asset;
 
@@ -35,7 +36,10 @@ contract BaseHandler is Test {
 
         // NOTE: wrappers always use WETH
         asset = IERC20Metadata(wrapper.asset());
-        precision = 10 ** asset.decimals();
+        uint8 decimals = asset.decimals();
+        precision = 10 ** decimals;
+        roundingPrecision = decimals > 8 ? 10 ** (decimals - 8) : 10 ** (8 - decimals);
+
         fCashId = wrapper.getfCashId();
         deal(address(asset), currentActor, 100 * precision, true);
 
@@ -64,7 +68,6 @@ contract DepositMintHandler is BaseHandler {
     function _mintViaERC1155(uint256 fCashAmount) internal {
         uint16 currencyId = wrapper.getCurrencyId();
         uint40 maturity = wrapper.getMaturity();
-        if (currencyId == ETH) vm.deal(currentActor, 1e18);
 
         (
             uint256 depositAmountUnderlying,
@@ -125,7 +128,7 @@ contract DepositMintHandler is BaseHandler {
 
         assertEq(previewValue, shares, "Deposit Shares");
         assertEq(sharesAfter - sharesBefore, shares, "Deposit Shares");
-        assertLe(assets - (assetsBefore - assetsAfter), 1e10, "Deposit Amount");
+        assertLe(assets - (assetsBefore - assetsAfter), roundingPrecision, "Deposit Amount");
 
         totalShares += shares;
     }
@@ -146,7 +149,7 @@ contract DepositMintHandler is BaseHandler {
 
         assertEq(previewValue, assets, "Mint Assets");
         assertEq(sharesAfter - sharesBefore, shares, "Mint Shares");
-        assertLe(assets - (assetsBefore - assetsAfter), 1e10, "Mint Amount");
+        assertLe(assets - (assetsBefore - assetsAfter), roundingPrecision, "Mint Amount");
 
         totalShares += shares;
     }
@@ -209,10 +212,10 @@ contract RedeemWithdrawHandler is BaseHandler {
             // a larger proportion
             assertRelDiff(previewValue, assets, 30 * BASIS_POINT, "Redeem Preview");
         } else {
-            assertAbsDiff(previewValue, assets, 5e10, "Redeem Preview");
+            assertAbsDiff(previewValue, assets, 5 * roundingPrecision, "Redeem Preview");
         }
 
-        assertAbsDiff(assets, (assetsAfter - assetsBefore), 1e10, " Redeem Amount");
+        assertAbsDiff(assets, (assetsAfter - assetsBefore), roundingPrecision, " Redeem Amount");
 
         totalShares -= shares;
     }
@@ -249,7 +252,7 @@ contract RedeemWithdrawHandler is BaseHandler {
             // a larger proportion
             assertRelDiff(assets, (assetsAfter - assetsBefore), 30 * BASIS_POINT, "Withdraw Amount");
         } else {
-            assertAbsDiff(assets, (assetsAfter - assetsBefore), 5e10, "Withdraw Amount");
+            assertAbsDiff(assets, (assetsAfter - assetsBefore), 5 * roundingPrecision, "Withdraw Amount");
         }
 
         totalShares -= shares;
