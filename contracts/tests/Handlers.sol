@@ -68,6 +68,9 @@ contract DepositMintHandler is BaseHandler {
     function _mintViaERC1155(uint256 fCashAmount) internal {
         uint16 currencyId = wrapper.getCurrencyId();
         uint40 maturity = wrapper.getMaturity();
+        // Normally WETH is dealt to the actor
+        if (currencyId == ETH) vm.deal(currentActor, 100e18);
+        else asset.approve(address(NOTIONAL), type(uint256).max);
 
         (
             uint256 depositAmountUnderlying,
@@ -172,6 +175,8 @@ contract RedeemWithdrawHandler is BaseHandler {
             wrapper.mint(mintAmount, actors[i]);
             vm.stopPrank();
         }
+
+        vm.warp(block.timestamp + 600);
 
         // Ensure that there is a bit of cash and fcash
         (uint256 cashBalance, uint256 fCash) = wrapper.getBalances();
