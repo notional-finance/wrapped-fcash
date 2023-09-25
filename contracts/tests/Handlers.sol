@@ -176,7 +176,7 @@ contract RedeemWithdrawHandler is BaseHandler {
             vm.stopPrank();
         }
 
-        vm.warp(block.timestamp + 600);
+        vm.warp(block.timestamp + 3600);
 
         // Ensure that there is a bit of cash and fcash
         (uint256 cashBalance, uint256 fCash) = wrapper.getBalances();
@@ -204,21 +204,13 @@ contract RedeemWithdrawHandler is BaseHandler {
         if (shares < 1_000) return;
 
         uint256 previewValue = wrapper.previewRedeem(shares);
-        (/* */, uint256 fCash) = wrapper.getBalances();
         uint256 assets = wrapper.redeem(shares, receiver, currentActor);
 
         uint256 assetsAfter = asset.balanceOf(receiver);
         uint256 sharesAfter = wrapper.balanceOf(currentActor);
 
         assertEq(sharesBefore - sharesAfter, shares, " Redeem Shares");
-        if (fCash < shares && !wrapper.hasMatured()) {
-            // If this occurs, there is more of a difference due to slippage between the
-            // withdraw oracle rate and the actual borrow rate so the preview is off by
-            // a larger proportion
-            assertRelDiff(previewValue, assets, 30 * BASIS_POINT, "Redeem Preview");
-        } else {
-            assertAbsDiff(previewValue, assets, 5 * roundingPrecision, "Redeem Preview");
-        }
+        assertAbsDiff(previewValue, assets, 5 * roundingPrecision, "Redeem Preview");
 
         assertAbsDiff(assets, (assetsAfter - assetsBefore), roundingPrecision, " Redeem Amount");
 
@@ -240,10 +232,9 @@ contract RedeemWithdrawHandler is BaseHandler {
         uint256 assetsBefore = asset.balanceOf(receiver);
         uint256 sharesBefore = wrapper.balanceOf(currentActor);
         // Withdrawing dust balances causes reverts
-        if (assets < 1e11) return;
+        if (assets < 10 * roundingPrecision) return;
 
         uint256 previewValue = wrapper.previewWithdraw(assets);
-        (/* */, uint256 fCash) = wrapper.getBalances();
         uint256 shares = wrapper.withdraw(assets, receiver, currentActor);
 
         uint256 assetsAfter = asset.balanceOf(receiver);
@@ -251,14 +242,7 @@ contract RedeemWithdrawHandler is BaseHandler {
 
         assertEq(previewValue, shares, "Withdraw Preview");
         assertEq(sharesBefore - sharesAfter, shares, "Withdraw Shares");
-        if (fCash < shares && !wrapper.hasMatured()) {
-            // If this occurs, there is more of a difference due to slippage between the
-            // withdraw oracle rate and the actual borrow rate so the preview is off by
-            // a larger proportion
-            assertRelDiff(assets, (assetsAfter - assetsBefore), 30 * BASIS_POINT, "Withdraw Amount");
-        } else {
-            assertAbsDiff(assets, (assetsAfter - assetsBefore), 5 * roundingPrecision, "Withdraw Amount");
-        }
+        assertAbsDiff(assets, (assetsAfter - assetsBefore), 5 * roundingPrecision, "Withdraw Amount");
 
         totalShares -= shares;
     }

@@ -95,8 +95,9 @@ abstract contract InvariantMatured is BaseInvariant {
         super.setUp();
         handler = new RedeemWithdrawHandler(wrapper);
 
-        vm.warp(maturity_3mo);
-        NOTIONAL.initializeMarkets(ETH, false);
+        (uint16 currencyId, uint40 maturity) = getWrapperParams();
+        vm.warp(maturity);
+        NOTIONAL.initializeMarkets(currencyId, false);
         targetContract(address(handler));
     }
 }

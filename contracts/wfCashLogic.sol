@@ -284,10 +284,23 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         uint16 currencyId = getCurrencyId();
 
         (uint256 initialCashBalance, uint256 fCashBalance) = getBalances();
+        bool hasInsufficientfCash = fCashBalance < fCashToSell;
+
         uint256 primeCashToWithdraw;
-        if (fCashBalance < fCashToSell) {
-            (primeCashToWithdraw, /* */) = getPresentCashValue(fCashToSell - fCashBalance);
-            require(primeCashToWithdraw <= initialCashBalance);
+        if (hasInsufficientfCash) {
+            // If there is insufficient fCash, calculate how much prime cash would be purchased if the
+            // given fCash amount would be sold and that will be how much the wrapper will withdraw and
+            // send to the receiver. Since fCash always sells at a discount to underlying prior to maturity,
+            // the wrapper is guaranteed to have sufficient cash to send to the account.
+            (/* */, primeCashToWithdraw, /* */, /* */) = NotionalV2.getPrincipalFromfCashBorrow(
+                currencyId,
+                fCashToSell,
+                getMaturity(),
+                0,
+                block.timestamp
+            );
+
+            // Re-write the fCash to sell to the entire fCash balance.
             fCashToSell = fCashBalance;
         }
 
@@ -300,11 +313,16 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 maxImpliedRate
             );
             NotionalV2.batchBalanceAndTradeAction(address(this), action);
-
-            (int256 postTradeCash, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
-            require(postTradeCash >= 0);
-            primeCashToWithdraw = primeCashToWithdraw + uint256(postTradeCash) - initialCashBalance;
         }
+
+        (int256 postTradeCash, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
+        require(postTradeCash >= 0);
+
+        // If the account did not have insufficient fCash, then the amount of cash change here is what
+        // the receiver is owed. In the other case, we transfer to the receiver the total calculated amount
+        // above without modification.
+        if (!hasInsufficientfCash) primeCashToWithdraw = uint256(postTradeCash) - initialCashBalance;
+        require(primeCashToWithdraw <= uint256(postTradeCash));
 
         // Withdraw the total amount of cash and send it to the receiver
         NotionalV2.withdraw(currencyId, _safeUint88(primeCashToWithdraw), !isETH);
