@@ -295,7 +295,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 block.timestamp
             );
             // If this is zero then it signifies that the trade will fail.
-            require(primeCashToWithdraw > 0);
+            require(primeCashToWithdraw > 0, "Redeem Failed");
 
             // Re-write the fCash to sell to the entire fCash balance.
             fCashToSell = fCashBalance;

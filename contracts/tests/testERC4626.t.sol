@@ -260,6 +260,49 @@ contract TestWrapperERC4626 is BaseTest {
         assertLe(assets - (assetsBefore - assetsAfter), 1e10, "Mint Amount");
     }
 
-    // function test_withdrawWhenMarketIsMaxed() public {
-    // }
+    function test_withdrawWhenMarketIsMaxed() public {
+        (uint256 totalfCash, uint256 maxFCash) = w.getTotalFCashAvailable();
+        deal(address(asset), LENDER, totalfCash * 500_000 * precision / 1e8, true);
+
+        asset.approve(address(w), type(uint256).max);
+        uint256 shares = maxFCash * 2;
+        w.mint(shares, LENDER);
+
+        (uint256 cashBalanceBefore, /* */) = w.getBalances();
+        assertGt(cashBalanceBefore, 0);
+
+        // Borrow all the cash to max out the rate...
+        MarketParameters[] memory markets = NOTIONAL.getActiveMarkets(w.getCurrencyId());
+        int256 totalPrimeCash = markets[0].totalPrimeCash * 92 / 100;
+
+        (/* */, /* */, bytes32 encodedTrade) = NOTIONAL.getfCashBorrowFromPrincipal(
+            w.getCurrencyId(),
+            uint256(totalPrimeCash),
+            w.getMaturity(),
+            0,
+            block.timestamp,
+            false
+        );
+
+        asset.approve(address(NOTIONAL), type(uint256).max);
+        BalanceActionWithTrades[] memory t = new BalanceActionWithTrades[](1);
+        bytes32[] memory trades = new bytes32[](1);
+        trades[0] = encodedTrade;
+        t[0] = BalanceActionWithTrades({
+            actionType: DepositActionType.DepositUnderlying,
+            currencyId: w.getCurrencyId(),
+            depositActionAmount: 10_000e18,
+            withdrawAmountInternalPrecision: 0,
+            withdrawEntireCashBalance: false,
+            redeemToUnderlying: true,
+            trades: trades
+        });
+        NOTIONAL.batchBalanceAndTradeAction(LENDER, t);
+
+        // The interest rate is now maxed out and the fCash market has insufficient
+        // cash so that the lender cannot redeem.
+        uint256 balance = w.balanceOf(LENDER);
+        vm.expectRevert("Redeem Failed");
+        w.redeem(balance, LENDER, LENDER);
+    }
 }
