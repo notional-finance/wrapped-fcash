@@ -68,7 +68,10 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         } else if (isETH || hasTransferFee || getCashBalance() > 0) {
             _lendLegacy(currencyId, depositAmountExternal, fCashAmount, minImpliedRate, msgValue, isETH);
         } else {
-            // Executes a lending action on Notional
+            // Executes a lending action on Notional. Since this lending action uses an existing cash balance
+            // prior to pulling payment, we cannot use it if there is a cash balance on the wrapper contract,
+            // it will cause existing cash balances to be minted into fCash and create a shortfall. In normal
+            // conditions, this method is more gas efficient.
             BatchLend[] memory action = EncodeDecode.encodeLendTrade(
                 currencyId,
                 getMarketIndex(),
