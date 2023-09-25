@@ -41,15 +41,14 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     ) internal nonReentrant {
         require(!hasMatured(), "fCash matured");
         (IERC20 token, bool isETH, bool hasTransferFee, uint256 precision) = _getTokenForMintInternal();
-        // In this case, the asset token == the underlying token and we should just rewrite the useUnderlying
-        // flag to false. The same amount of tokens will be transferred in either case so this method will behave
-        // just like it has asset tokens.
         uint256 balanceBefore = isETH ? WETH.balanceOf(address(this)) : token.balanceOf(address(this));
         uint256 msgValue;
         uint16 currencyId = getCurrencyId();
         
         if (isETH) {
-            // safeTransferFrom not required since WETH is known to be compatible
+            // Use WETH if lending ETH. Although Notional natively supports ETH, we use WETH here for integration
+            // contracts so they only have to support ERC20 token transfers.
+            // NOTE: safeTransferFrom not required since WETH is known to be compatible
             IERC20((address(WETH))).transferFrom(msg.sender, address(this), depositAmountExternal);
             WETH.withdraw(depositAmountExternal);
             msgValue = depositAmountExternal;
@@ -66,7 +65,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
             // NOTE: Residual (depositAmountExternal - fCashAmountExternal) will be transferred
             // back to the account
             NotionalV2.depositUnderlyingToken{value: msgValue}(address(this), currencyId, fCashAmountExternal);
-        } else if (isETH || hasTransferFee) {
+        } else if (isETH || hasTransferFee || getCashBalance() > 0) {
             _lendLegacy(currencyId, depositAmountExternal, fCashAmount, minImpliedRate, msgValue, isETH);
         } else {
             // Executes a lending action on Notional
@@ -108,7 +107,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         // then we need to return the difference between postTradeCash - preTradeCash. This is done because
         // the encoded trade does not automatically withdraw the entire cash balance in case the wrapper
         // is holding a cash balance.
-        (int256 preTradeCash, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
+        uint256 preTradeCash = getCashBalance();
 
         BalanceActionWithTrades[] memory action = EncodeDecode.encodeLegacyLendTrade(
             currencyId,
@@ -121,15 +120,11 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         // native ETH tokens will be wrapped back to WETH.
         NotionalV2.batchBalanceAndTradeAction{value: msgValue}(address(this), action);
 
-        (int256 postTradeCash, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
+        uint256 postTradeCash = getCashBalance();
 
         if (preTradeCash != postTradeCash) {
-            require(preTradeCash < postTradeCash);
-            NotionalV2.withdraw(
-                currencyId,
-                _safeUint88(uint256(postTradeCash - preTradeCash)),
-                !isETH
-            );
+            // If ETH, then redeem to WETH (redeemToUnderlying == false)
+            NotionalV2.withdraw(currencyId, _safeUint88(postTradeCash - preTradeCash), !isETH);
         }
     }
 
@@ -220,14 +215,14 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     /// the fCash properly before and after maturity.
     function _burnInternal(
         address from,
-        uint256 amount,
+        uint256 fCashShares,
         RedeemOpts memory opts
     ) internal nonReentrant {
         require(opts.receiver != address(0), "Receiver is zero address");
         require(opts.redeemToUnderlying || opts.transferfCash);
         // This will validate that the account has sufficient tokens to burn and make
         // any relevant underlying stateful changes to balances.
-        super._burn(from, amount);
+        super._burn(from, fCashShares);
 
         if (hasMatured()) {
             require(opts.transferfCash == false);
@@ -238,7 +233,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
             // cache it in storage locally
             NotionalV2.settleAccount(address(this));
             uint16 currencyId = getCurrencyId();
-            uint256 primeCashClaim = getMaturedCashValue(amount);
+            uint256 primeCashClaim = _getMaturedCashValue(fCashShares);
 
             // Transfer withdrawn tokens to the `from` address
             _withdrawCashToAccount(currencyId, opts.receiver, _safeUint88(primeCashClaim));
@@ -251,11 +246,11 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 address(this), // Sending from this contract
                 opts.receiver, // Where to send the fCash
                 getfCashId(), // fCash identifier
-                amount, // Amount of fCash to send
+                fCashShares, // Amount of fCash to send
                 ""
             );
         } else {
-            _sellfCash(opts.receiver, amount, opts.maxImpliedRate);
+            _sellfCash(opts.receiver, fCashShares, opts.maxImpliedRate);
         }
     }
 
@@ -263,12 +258,12 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     function _withdrawCashToAccount(
         uint16 currencyId,
         address receiver,
-        uint88 assetInternalCashClaim
+        uint88 primeCashToWithdraw
     ) private returns (uint256 tokensTransferred) {
         (IERC20 token, bool isETH) = getToken(true);
         uint256 balanceBefore = isETH ? WETH.balanceOf(address(this)) : token.balanceOf(address(this));
 
-        NotionalV2.withdraw(currencyId, assetInternalCashClaim, !isETH);
+        NotionalV2.withdraw(currencyId, primeCashToWithdraw, !isETH);
 
         tokensTransferred = _sendTokensToReceiver(token, receiver, isETH, balanceBefore);
     }
@@ -299,6 +294,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 0,
                 block.timestamp
             );
+            // If this is zero then it signifies that the trade will fail.
+            require(primeCashToWithdraw > 0);
 
             // Re-write the fCash to sell to the entire fCash balance.
             fCashToSell = fCashBalance;
@@ -315,14 +312,13 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
             NotionalV2.batchBalanceAndTradeAction(address(this), action);
         }
 
-        (int256 postTradeCash, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
-        require(postTradeCash >= 0);
+        uint256 postTradeCash = getCashBalance();
 
         // If the account did not have insufficient fCash, then the amount of cash change here is what
         // the receiver is owed. In the other case, we transfer to the receiver the total calculated amount
         // above without modification.
-        if (!hasInsufficientfCash) primeCashToWithdraw = uint256(postTradeCash) - initialCashBalance;
-        require(primeCashToWithdraw <= uint256(postTradeCash));
+        if (!hasInsufficientfCash) primeCashToWithdraw = postTradeCash - initialCashBalance;
+        require(primeCashToWithdraw <= postTradeCash);
 
         // Withdraw the total amount of cash and send it to the receiver
         NotionalV2.withdraw(currencyId, _safeUint88(primeCashToWithdraw), !isETH);

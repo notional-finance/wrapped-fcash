@@ -13,17 +13,31 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         return isETH ? address(WETH) : address(underlyingToken);
     }
 
-    /** @dev See {IERC4626-totalAssets} */
+    /** 
+     * @notice Although not explicitly required by ERC4626 standards, this totalAssets method
+     * is expected to be manipulation resistant because it queries an internal Notional V2 TWAP
+     * of the fCash interest rate. This means that the value here along with `convertToAssets`
+     * and `convertToShares` can be used as an on-chain price oracle.
+     *
+     * If the wrapper is holding a cash balance prior to maturity, the total value of assets held
+     * by the contract will exceed what is returned by this function. The value of the excess value
+     * should never be accessible by Wrapped fCash holders due to the redemption mechanism, therefore
+     * the lower reported value is correct.
+     *
+     * @dev See {IERC4626-totalAssets}
+     */
     function totalAssets() public view override returns (uint256) {
         if (hasMatured()) {
-            uint256 primeCashValue = getMaturedCashValue(totalSupply());
+            // We calculate the matured cash value of the total supply of fCash. This is
+            // not always equal to the cash balance held by the wrapper contract.
+            uint256 primeCashValue = _getMaturedCashValue(totalSupply());
             require(primeCashValue < uint256(type(int256).max));
             int256 externalValue = NotionalV2.convertCashBalanceToExternal(
                 getCurrencyId(), int256(primeCashValue), true
             );
             return externalValue >= 0 ? uint256(externalValue) : 0;
         } else {
-            (/* */, uint256 pvExternal) = getPresentCashValue(totalSupply());
+            (/* */, uint256 pvExternal) = _getPresentCashValue(totalSupply());
             return pvExternal;
         }
     }
@@ -33,7 +47,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         uint256 supply = totalSupply();
         if (supply == 0) {
             // Scales assets by the value of a single unit of fCash
-            (/* */, uint256 unitfCashValue) = getPresentCashValue(uint256(Constants.INTERNAL_TOKEN_PRECISION));
+            (/* */, uint256 unitfCashValue) = _getPresentCashValue(uint256(Constants.INTERNAL_TOKEN_PRECISION));
             return (assets * uint256(Constants.INTERNAL_TOKEN_PRECISION)) / unitfCashValue;
         }
 
@@ -45,7 +59,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         uint256 supply = totalSupply();
         if (supply == 0) {
             // Catch the edge case where totalSupply causes a divide by zero error
-            (/* */, assets) = getPresentCashValue(shares);
+            (/* */, assets) = _getPresentCashValue(shares);
         } else {
             assets = (shares * totalAssets()) / supply;
         }

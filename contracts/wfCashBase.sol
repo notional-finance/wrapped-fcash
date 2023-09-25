@@ -133,9 +133,13 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         }
     }
 
-    /// @notice Returns the asset token which the fCash settles to. This will be an interest
-    /// bearing token like a cToken or aToken.
-    function getAssetToken() public view override returns (IERC20 assetToken, int256 underlyingPrecision, TokenType tokenType) {
+    /// @notice [Deprecated] is no longer used internal to the contract but left here to maintain
+    /// compatibility with previous interface
+    function getAssetToken() public view override returns (
+        IERC20 assetToken,
+        int256 underlyingPrecision,
+        TokenType tokenType
+    ) {
         (Token memory asset, /* Token memory underlying */) = NotionalV2.getCurrency(getCurrencyId());
         return (IERC20(asset.tokenAddress), asset.decimals, asset.tokenType);
     }
@@ -164,16 +168,20 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         return (uint256(totalfCash), maxFCash);
     }
 
-    function getBalances() public view returns (uint256 cashBalance, uint256 fCashBalance) {
+    /// @notice Returns the cash balance held by the account, if any.
+    function getCashBalance() public view returns (uint256) {
         (int256 cash, /* */, /* */) = NotionalV2.getAccountBalance(getCurrencyId(), address(this));
-        // Wrapper can never have a negative cash balance
         require(cash >= 0);
+        return uint256(cash);
+    }
 
-        cashBalance = uint256(cash);
+    /// @notice Returns the cash balance and fCash balance held by the account
+    function getBalances() public view returns (uint256 cashBalance, uint256 fCashBalance) {
+        cashBalance = getCashBalance();
         fCashBalance = NotionalV2.balanceOf(address(this), _fCashId);
     }
 
-    function getPresentCashValue(uint256 fCashAmount) internal view returns (
+    function _getPresentCashValue(uint256 fCashAmount) internal view returns (
         uint256 primeCashValue,
         uint256 pvExternalUnderlying
     ) {
@@ -198,7 +206,7 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         pvExternalUnderlying = uint256(pvExternal);
     }
 
-    function getMaturedCashValue(uint256 fCashAmount) internal view returns (uint256) {
+    function _getMaturedCashValue(uint256 fCashAmount) internal view returns (uint256) {
         if (!hasMatured()) return 0;
         // If the fCash has matured we use the cash balance instead.
         (uint16 currencyId, uint40 maturity) = getDecodedID();

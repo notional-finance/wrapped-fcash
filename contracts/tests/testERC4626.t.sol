@@ -233,4 +233,33 @@ contract TestWrapperERC4626 is BaseTest {
         assertEq(fCash, 0, "fCash Balance");
         assertAbsDiff(uint256(cashBalanceInUnderlying), shares * 1e10, 1e10, "pCash Balance");
     }
+
+    function test_lendWhenWrapperHasCash() public {
+        (uint256 totalfCash, uint256 maxFCash) = w.getTotalFCashAvailable();
+        deal(address(asset), LENDER, totalfCash * 5 * precision / 1e8, true);
+
+        asset.approve(address(w), type(uint256).max);
+        uint256 shares = maxFCash * 2;
+        w.mint(shares, LENDER);
+
+        (uint256 cashBalanceBefore, /* */) = w.getBalances();
+        assertGt(cashBalanceBefore, 0);
+
+        uint256 assetsBefore = asset.balanceOf(LENDER);
+        uint256 sharesBefore = w.balanceOf(LENDER);
+
+        uint256 assets = w.mint(maxFCash / 2, LENDER);
+
+        (uint256 cashBalanceAfter, /* */) = w.getBalances();
+        uint256 assetsAfter = asset.balanceOf(LENDER);
+        uint256 sharesAfter = w.balanceOf(LENDER);
+
+        // Ensure that the contract does not lend excess cash when it is holding it.
+        assertEq(sharesBefore + maxFCash / 2, sharesAfter, "fCash Shares");
+        assertEq(cashBalanceBefore, cashBalanceAfter, "Cash Balance Changed");
+        assertLe(assets - (assetsBefore - assetsAfter), 1e10, "Mint Amount");
+    }
+
+    // function test_withdrawWhenMarketIsMaxed() public {
+    // }
 }
