@@ -28,7 +28,7 @@ wfCash can be redeemed anytime before or after maturity. Redeeming fCash prior t
 
 fCash (and wfCash is no different) settles to prime cash tokens (i.e. pCash) at maturity and will accrue a variable interest rate from that point forward. Accounts that redeem their wfCash after maturity will receive their fixed interest as well as any accrued variable rate interest post maturity.
 
-Before or after maturity, redeeming wfCash can be done by calling `redeem`, `redeemToUnderlying`,  or `withdraw`. Accounts are also able to call `redeem` and specify the `transferfCash` boolean in `RedeemOpts` to have the wfCash transfer the ERC1155 fCash token to their Notional account.
+Before or after maturity, redeeming wfCash can be done by calling `redeem`, `redeemToUnderlying`, or `withdraw`. Accounts are also able to call `redeem` and specify the `transferfCash` boolean in `RedeemOpts` to have the wfCash transfer the ERC1155 fCash token to their Notional account.
 
 # Differences with V2
 
@@ -37,10 +37,48 @@ Before or after maturity, redeeming wfCash can be done by calling `redeem`, `red
 fCash experiences liquidity constraints at extremely low and extremely high fixed rates. At fixed interest rates near zero, there is insufficient fCash in the corresponding liquidity pool to be purchased. On Notional, lending will revert in these conditions. However, wfCash will continue to allow lenders to mint wfCash at a 0% interest rate (i.e. at a 1-1 exchange rate with underlying). This fixed rate is disadvantageous to the user because they forgo any accrued variable interest in favor of 0% fixed interest. However, as a compatibility layer it may be useful in some contexts to ensure that wfCash will can continue to mint shares even under these conditions.
 
 When lending at zero interest rates occurs, the wfCash contract will take underlying tokens and hold them as Prime Cash. If a user redeems their fCash prior to maturity, they will receive as much underlying as the corresponding amount of fCash could be sold for on the fCash market. If the contract does not have sufficient actual fCash to sell to the market, any shortfall is deducted from the prime cash balance. Since fCash always trades at a discount, the wrapper contract will always accrue some profit due to the foregone variable lending interest under these conditions.
+
 ## Deprecation of Asset Tokens
 
 In Notional V3, asset tokens are deprecated in favor of Prime Cash. The `mintViaAsset` and `redeemViaAsset` methods are deprecated. Minting and redeeming to prime cash is not supported.
 
 ## Gas Costs
 
-TODO: add gas costs here
+| WrappedfCashFactory contract |       |        |        |        |         |
+| ---------------------------- | ----- | ------ | ------ | ------ | ------- |
+| Function Name                | min   | avg    | median | max    | # calls |
+| computeAddress               | 11074 | 11074  | 11074  | 11074  | 2       |
+| deployWrapper                | 884   | 407889 | 431750 | 450250 | 56      |
+
+| wfCash ERC4626 contract                    |       |        |        |        |         |
+| ------------------------------------------ | ----- | ------ | ------ | ------ | ------- |
+| Function Name                              | min   | avg    | median | max    | # calls |
+| allowance                                  | 763   | 763    | 763    | 763    | 2       |
+| approve                                    | 24641 | 24641  | 24641  | 24641  | 2       |
+| asset                                      | 13235 | 28812  | 30746  | 30746  | 272     |
+| balanceOf                                  | 686   | 1311   | 686    | 2686   | 467     |
+| convertToAssets                            | 25059 | 44773  | 45441  | 80861  | 8       |
+| convertToShares                            | 25076 | 49871  | 45458  | 121531 | 8       |
+| deposit                                    | 25428 | 313464 | 295482 | 527192 | 39      |
+| getBalances                                | 19898 | 46370  | 47898  | 74700  | 106     |
+| getCurrencyId                              | 489   | 1385   | 489    | 2489   | 203     |
+| getMaturity                                | 463   | 463    | 463    | 463    | 136     |
+| getTotalFCashAvailable                     | 21124 | 56066  | 61931  | 77476  | 18      |
+| getUnderlyingToken                         | 17055 | 17055  | 17055  | 17055  | 90      |
+| getfCashId                                 | 401   | 890    | 401    | 2401   | 368     |
+| hasMatured                                 | 555   | 555    | 555    | 555    | 41      |
+| initialize                                 | 43204 | 150418 | 161394 | 178984 | 55      |
+| maxRedeem                                  | 2720  | 2720   | 2720   | 2720   | 42      |
+| maxWithdraw                                | 40132 | 53871  | 53106  | 77969  | 45      |
+| mint                                       | 25363 | 293675 | 281686 | 484406 | 110     |
+| onERC1155Received                          | 23246 | 45908  | 36489  | 97089  | 49      |
+| previewDeposit                             | 83117 | 90593  | 83432  | 140469 | 36      |
+| previewMint                                | 78582 | 81241  | 78750  | 122054 | 34      |
+| previewRedeem                              | 37852 | 48112  | 50723  | 75591  | 39      |
+| previewWithdraw                            | 25350 | 53423  | 59142  | 84076  | 44      |
+| recoverInvalidfCash                        | 1934  | 45966  | 45966  | 89998  | 2       |
+| redeem(uint256,(bool,bool,address,uint32)) | 3288  | 119037 | 115795 | 225510 | 32      |
+| redeem(uint256,address,address)(uint256)   | 15231 | 214588 | 269493 | 323160 | 45      |
+| totalAssets                                | 44951 | 55591  | 55451  | 89560  | 92      |
+| totalSupply                                | 426   | 2316   | 2426   | 2426   | 238     |
+| withdraw                                   | 63328 | 284460 | 315572 | 395806 | 47      |
