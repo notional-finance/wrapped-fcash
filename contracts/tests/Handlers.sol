@@ -115,6 +115,27 @@ contract DepositMintHandler is BaseHandler {
         _mintViaERC1155(0.05e8);
     }
 
+    function mintViaUnderlying(uint256 actorIndexSeed, uint256 receiverIndex) useActor(actorIndexSeed, true) public {
+        receiverIndex = bound(receiverIndex, 0, actors.length - 1);
+        address receiver = actors[receiverIndex];
+        uint256 assets = 0.05e8 * precision / 1e8;
+
+        uint256 assetsBefore = asset.balanceOf(currentActor);
+        uint256 sharesBefore = wrapper.balanceOf(receiver);
+        uint256 previewValue = wrapper.previewDeposit(assets);
+
+        wrapper.mintViaUnderlying(assets, uint88(previewValue), receiver, 0);
+
+        uint256 assetsAfter = asset.balanceOf(currentActor);
+        uint256 sharesAfter = wrapper.balanceOf(receiver);
+        uint256 shares = sharesAfter - sharesBefore;
+
+        assertEq(previewValue, shares, "Deposit Shares");
+        assertLe(assets - (assetsBefore - assetsAfter), roundingPrecision, "Deposit Amount");
+
+        totalShares += shares;
+    }
+
     function deposit(uint256 actorIndexSeed, uint256 receiverIndex) useActor(actorIndexSeed, true) public {
         receiverIndex = bound(receiverIndex, 0, actors.length - 1);
         address receiver = actors[receiverIndex];

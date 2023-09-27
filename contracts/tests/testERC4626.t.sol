@@ -23,6 +23,12 @@ contract TestWrapperERC4626 is BaseTest {
         vm.startPrank(LENDER);
     }
 
+    function test_RevertIf_SlippageLimit() public {
+        asset.approve(address(w), type(uint256).max);
+        vm.expectRevert("Trade failed, slippage");
+        w.mintViaUnderlying(100e18, 100e8, LENDER, 0.15e9);
+    }
+
     function test_RevertIf_Mint_WithoutApproval() public {
         vm.expectRevert("Dai/insufficient-allowance");
         w.mint(1e8, LENDER);
