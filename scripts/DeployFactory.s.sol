@@ -33,7 +33,7 @@ contract DeployFactory is Script, Test {
         // Nonce: 102
         wfCashERC4626 impl = new wfCashERC4626(NOTIONAL, WETH);
         nUpgradeableBeacon beacon = new nUpgradeableBeacon(address(impl));
-        IWrappedfCashFactory factory = new WrappedfCashFactory(address(beacon));
+        WrappedfCashFactory factory = new WrappedfCashFactory(address(beacon));
         beacon.transferOwnership(NOTIONAL.owner());
         uint40 maturity = uint40(NOTIONAL.getActiveMarkets(1)[0].maturity);
 

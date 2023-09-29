@@ -2,10 +2,9 @@
 pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
-import "../../interfaces/notional/IWrappedfCashFactory.sol";
 import "./nBeaconProxy.sol";
 
-contract WrappedfCashFactory is IWrappedfCashFactory {
+contract WrappedfCashFactory {
 
     /// @dev the Beacon contract here is an UpgradeableBeacon proxy, the contract
     /// at this address can be upgraded which will upgrade all deployed wrappers.
@@ -16,6 +15,9 @@ contract WrappedfCashFactory is IWrappedfCashFactory {
     /// from storage. Since these addresses are immutable, storing it once the wrapper is
     /// deployed will pay for itself after 3 on-chain calls to computeAddress.
     mapping(uint256 => mapping(uint256 => address)) internal _cachedWrapperAddress;
+
+    /// @notice Emitted when a new fCash wrapper has been deployed
+    event WrapperDeployed(uint16 currencyId, uint40 maturity, address wrapper);
 
     constructor(address _beacon) {
         BEACON = _beacon;
