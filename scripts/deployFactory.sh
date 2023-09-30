@@ -1,5 +1,7 @@
 set -e
 
+source .env
+
 forge script --sender 0x8B64fA5Fd129df9c755eB82dB1e16D6D0Bdf5Bc3 --rpc-url $ETH_RPC_URL scripts/DeployBeacon.s.sol --broadcast --account ARBITRUM-ONE_PRIMARY_DEPLOYER
 
 # Manually verify using verify.json and beacon address constructor arg

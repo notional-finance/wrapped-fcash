@@ -25,6 +25,7 @@ contract VerifyFactory is Script {
         vm.startBroadcast();
         // Verify compute address
         beacon.transferOwnership(NOTIONAL.owner());
+        require(beacon.owner() == 0xbf778Fc19d0B55575711B6339A3680d07352B221);
     }
 
 }
