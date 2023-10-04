@@ -311,4 +311,15 @@ contract TestWrapperERC4626 is BaseTest {
         vm.expectRevert("Redeem Failed");
         w.redeem(balance, LENDER, LENDER);
     }
+
+    function test_redeemFullMatured() public {
+        asset.approve(address(w), type(uint256).max);
+        w.mint(1000e8, LENDER);
+
+        vm.warp(maturity_3mo);
+        NOTIONAL.initializeMarkets(DAI, false);
+        
+        uint256 assets = w.redeem(w.balanceOf(LENDER), LENDER, LENDER);
+        assertAbsDiff(assets, 1000e18, 1e10, "Asset Value Change");
+    }
 }

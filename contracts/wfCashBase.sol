@@ -216,7 +216,7 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         if (pr.supplyFactor == 0) return 0;
         require(pr.supplyFactor > 0);
 
-        return fCashAmount * uint256(pr.supplyFactor) / Constants.DOUBLE_SCALAR_PRECISION;
+        return fCashAmount * Constants.DOUBLE_SCALAR_PRECISION / uint256(pr.supplyFactor);
     }
 
     /// @dev Internal method with more flags required for use inside mint internal
