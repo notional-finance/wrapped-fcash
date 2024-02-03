@@ -58,6 +58,9 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         }
 
         if (maxFCash < fCashAmount) {
+            // Transfer fees will break the lending at zero functionality since fees will cause lending
+            // to occur at slightly less than a 1-1 ratio. Just don't allow this to occur.
+            require(hasTransferFee == false);
             // NOTE: lending at zero
             uint256 fCashAmountExternal = fCashAmount * precision / uint256(Constants.INTERNAL_TOKEN_PRECISION);
             require(fCashAmountExternal <= depositAmountExternal);
