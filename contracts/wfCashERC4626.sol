@@ -92,6 +92,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         (uint16 currencyId, uint40 maturity) = getDecodedID();
         (/* */, maxFCash) = getTotalFCashAvailable();
 
+        // This method reverts when lending cannot successfully occur.
         try NotionalV2.getfCashLendFromDeposit(
             currencyId,
             assets,
@@ -102,7 +103,10 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         ) returns (uint88 s, uint8, bytes32) {
             shares = s;
         } catch {
-            shares = maxFCash;
+            (/* */, int256 precision) = getUnderlyingToken();
+            require(precision > 0);
+            // In this case, will lend at zero which is 1-1 with assets.
+            shares = assets * uint256(Constants.INTERNAL_TOKEN_PRECISION) / uint256(precision);
         }
     }
 

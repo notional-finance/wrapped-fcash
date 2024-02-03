@@ -222,7 +222,14 @@ contract TestWrapperERC4626 is BaseTest {
 
         asset.approve(address(w), type(uint256).max);
         uint256 shares = maxFCash * 2;
+        uint256 assetBefore = asset.balanceOf(LENDER);
+        uint256 expectedAssets = w.previewMint(shares);
+        uint256 expectedShares = w.previewDeposit(expectedAssets);
         w.mint(shares, LENDER);
+        uint256 assetAfter = asset.balanceOf(LENDER);
+
+        assertEq(expectedShares, shares, "Expected Shares");
+        assertEq(expectedAssets, assetBefore - assetAfter, "Expected Assets");
 
         (/* */, uint256 maxFCashAfter) = w.getTotalFCashAvailable();
         assertEq(maxFCashAfter, maxFCash);
