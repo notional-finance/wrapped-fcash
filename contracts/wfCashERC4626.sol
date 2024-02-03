@@ -259,7 +259,8 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
                 redeemToUnderlying: true,
                 transferfCash: false,
                 receiver: receiver,
-                maxImpliedRate: 0
+                // No slippage protecting in ERC4626 natively
+                minUnderlyingOut: 0
             })
         );
     }
