@@ -29,6 +29,22 @@ contract TestWrapperERC4626 is BaseTest {
         w.mintViaUnderlying(100e18, 100e8, LENDER, 0.15e9);
     }
 
+    function test_RevertIf_SlippageLimitWhenLendAtZero() public {
+        (uint256 totalfCash, uint256 maxFCash) = w.getTotalFCashAvailable();
+        deal(address(asset), LENDER, totalfCash * 5 * precision / 1e8, true);
+
+        asset.approve(address(w), type(uint256).max);
+        uint256 shares = maxFCash * 2;
+        uint256 balance = asset.balanceOf(LENDER);
+
+        vm.expectRevert("Slippage");
+        w.mintViaUnderlying(balance, uint88(shares), LENDER, 0.01e9);
+
+        // This will pass the slippage check
+        w.mintViaUnderlying(balance, uint88(shares), LENDER, 0);
+        assertEq(w.balanceOf(LENDER), shares);
+    }
+
     function test_RevertIf_Mint_WithoutApproval() public {
         vm.expectRevert("Dai/insufficient-allowance");
         w.mint(1e8, LENDER);
