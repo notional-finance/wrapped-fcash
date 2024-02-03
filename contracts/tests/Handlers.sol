@@ -280,7 +280,7 @@ contract RedeemWithdrawHandler is BaseHandler {
             redeemToUnderlying: false,
             transferfCash: true,
             receiver: currentActor,
-            maxImpliedRate: 0
+            minUnderlyingOut: 0
         }));
 
         assertEq(wrapper.balanceOf(currentActor), balance - redeemAmount, "Wrapper Balance");
