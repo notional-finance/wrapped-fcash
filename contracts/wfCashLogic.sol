@@ -214,6 +214,21 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         require(ac.hasDebt == 0x00);
     }
 
+    /// @notice Allows the owner to recover prime cash profits to the treasury after all
+    /// shares have been withdrawn.
+    function recoverPrimeCash() external {
+        address owner = NotionalV2.owner();
+        // Only the Notional owner can call this method
+        require(msg.sender == owner);
+        // Can only do this after maturity and when the total supply has drawn down
+        require(hasMatured());
+        require(totalSupply() == 0);
+
+        uint256 cashBalance = getCashBalance();
+        require(cashBalance > 0);
+        _withdrawCashToAccount(getCurrencyId(), owner, _safeUint88(cashBalance));
+    }
+
     /// @notice Called before tokens are burned (redemption) and so we will handle
     /// the fCash properly before and after maturity.
     function _burnInternal(
