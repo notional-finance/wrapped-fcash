@@ -26,20 +26,8 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
      *
      * @dev See {IERC4626-totalAssets}
      */
-    function totalAssets() public view override returns (uint256) {
-        if (hasMatured()) {
-            // We calculate the matured cash value of the total supply of fCash. This is
-            // not always equal to the cash balance held by the wrapper contract.
-            uint256 primeCashValue = _getMaturedCashValue(totalSupply());
-            require(primeCashValue < uint256(type(int256).max));
-            int256 externalValue = NotionalV2.convertCashBalanceToExternal(
-                getCurrencyId(), int256(primeCashValue), true
-            );
-            return externalValue >= 0 ? uint256(externalValue) : 0;
-        } else {
-            (/* */, uint256 pvExternal) = _getPresentCashValue(totalSupply());
-            return pvExternal;
-        }
+    function totalAssets() public view override returns (uint256 pvExternal) {
+        (/* */, pvExternal) = _getPresentCashValue(totalSupply());
     }
 
     /** @dev See {IERC4626-convertToShares} */

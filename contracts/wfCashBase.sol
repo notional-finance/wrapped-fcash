@@ -181,39 +181,52 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         fCashBalance = NotionalV2.balanceOf(address(this), _fCashId);
     }
 
+    /// @notice Returns the current value of fCash regardless of whether or not it has
+    /// been settled. Used to return asset valuations in ERC4626 methods.
     function _getPresentCashValue(uint256 fCashAmount) internal view returns (
         uint256 primeCashValue,
         uint256 pvExternalUnderlying
     ) {
-        if (hasMatured()) return (0, 0);
-        (/* */, int256 precision) = getUnderlyingToken();
-
         // Get the present value of the fCash held by the contract, this is returned in 8 decimal precision
         (uint16 currencyId, uint40 maturity) = getDecodedID();
-        int256 pvInternal = NotionalV2.getPresentfCashValue(
-            currencyId,
-            maturity,
-            int256(fCashAmount),
-            block.timestamp,
-            false
-        );
-        int256 pvExternal = pvInternal * precision / Constants.INTERNAL_TOKEN_PRECISION;
-        require(pvExternal >= 0);
-        int256 cashValue = NotionalV2.convertUnderlyingToPrimeCash(currencyId, pvExternal);
-        require(cashValue >= 0);
 
-        primeCashValue = uint256(cashValue);
-        pvExternalUnderlying = uint256(pvExternal);
+        if (hasMatured()) {
+            primeCashValue = _getMaturedCashValue(fCashAmount);
+            int256 externalValue = NotionalV2.convertCashBalanceToExternal(
+                currencyId, int256(primeCashValue), true
+            );
+            require(externalValue >= 0);
+            pvExternalUnderlying = uint256(externalValue);
+        } else {
+            (/* */, int256 precision) = getUnderlyingToken();
+
+            int256 pvInternal = NotionalV2.getPresentfCashValue(
+                currencyId,
+                maturity,
+                int256(fCashAmount),
+                block.timestamp,
+                false
+            );
+            int256 pvExternal = pvInternal * precision / Constants.INTERNAL_TOKEN_PRECISION;
+            require(pvExternal >= 0);
+            int256 cashValue = NotionalV2.convertUnderlyingToPrimeCash(currencyId, pvExternal);
+            require(cashValue >= 0);
+
+            primeCashValue = uint256(cashValue);
+            pvExternalUnderlying = uint256(pvExternal);
+        }
     }
 
+    /// @notice Returns the matured prime cash value of an fCash amount. Settlement rates will
+    /// be up to date at the current block until they are set via initialize markets.
     function _getMaturedCashValue(uint256 fCashAmount) internal view returns (uint256) {
-        if (!hasMatured()) return 0;
+        require(hasMatured());
         // If the fCash has matured we use the cash balance instead.
         (uint16 currencyId, uint40 maturity) = getDecodedID();
-        PrimeRate memory pr = NotionalV2.getSettlementRate(currencyId, maturity);
 
-        // fCash has not yet been settled
-        if (pr.supplyFactor == 0) return 0;
+        // The settlement rate will always be returned up to the current supplyFactor
+        // here even if the settlement rate is not yet set.
+        PrimeRate memory pr = NotionalV2.getSettlementRate(currencyId, maturity);
         require(pr.supplyFactor > 0);
 
         return fCashAmount * Constants.DOUBLE_SCALAR_PRECISION / uint256(pr.supplyFactor);
