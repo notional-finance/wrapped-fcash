@@ -119,20 +119,38 @@ contract TestWrapperERC1155 is BaseTest {
         }));
     }
 
-    function test_LendAtZero_ETH_Refunds() public {
+    function test_LendAtZero_ETHRefunds() public {
         (/* */, uint256 maxFCash) = w.getTotalFCashAvailable();
 
         asset.approve(address(w), type(uint256).max);
-        uint256 shares = maxFCash * 2;
-        uint256 previewAssets = w.previewMint(shares);
-        // Deposit excess to test refunds
-        deal(address(asset), LENDER, previewAssets * 2, true);
 
-        uint256 assetsBefore = asset.balanceOf(LENDER);
-        w.mintViaUnderlying(previewAssets * 2, uint88(shares), LENDER, 0);
-        uint256 assetsAfter = asset.balanceOf(LENDER);
+        {
+            uint256 shares = maxFCash * 2;
+            uint256 previewAssets = w.previewMint(shares);
+            // Deposit excess to test refunds
+            deal(address(asset), LENDER, previewAssets * 2, true);
 
-        // The method should only take sufficient assets to mint the required shares.
-        assertLe(previewAssets - (assetsBefore - assetsAfter), 1e10, "Deposit Amount");
+            uint256 assetsBefore = asset.balanceOf(LENDER);
+            w.mintViaUnderlying(previewAssets * 2, uint88(shares), LENDER, 0);
+            uint256 assetsAfter = asset.balanceOf(LENDER);
+
+            // The method should only take sufficient assets to mint the required shares.
+            int256 diff = int256(previewAssets) - int256(assetsBefore - assetsAfter);
+            assertLe(diff < 0 ? -diff : diff, 1e10, "Deposit Amount");
+        }
+
+        {
+            uint256 shares = maxFCash / 10;
+            uint256 previewAssets = w.previewMint(shares);
+
+            deal(address(asset), LENDER, previewAssets * 2, true);
+            uint256 assetsBefore = asset.balanceOf(LENDER);
+            w.mintViaUnderlying(previewAssets * 2, uint88(shares), LENDER, 0);
+            uint256 assetsAfter = asset.balanceOf(LENDER);
+
+            // The method should only take sufficient assets to mint the required shares.
+            int256 diff = int256(previewAssets) - int256(assetsBefore - assetsAfter);
+            assertLe(diff < 0 ? -diff : diff, 1e10, "Deposit Amount");
+        }
     }
 }
