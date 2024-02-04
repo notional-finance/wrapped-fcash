@@ -179,4 +179,24 @@ contract TestWrapperERC1155 is BaseTest {
             w.mintViaUnderlying(previewAssets / 2, uint88(shares), LENDER, 0);
         }
     }
+
+    function test_RevertIf_TransferToNegativeFCash() public {
+        (uint256 totalfCash, uint256 maxFCash) = w.getTotalFCashAvailable();
+        deal(address(asset), LENDER, totalfCash * 5 * precision / 1e8, true);
+
+        asset.approve(address(w), type(uint256).max);
+        uint256 shares = maxFCash * 2;
+        w.mint(shares, LENDER);
+
+        uint256 wrapperBalance = NOTIONAL.balanceOf(address(w), fCashId);
+        assertLt(wrapperBalance, shares);
+
+        vm.expectRevert();
+        w.redeem(shares, IWrappedfCash.RedeemOpts({
+            redeemToUnderlying: false,
+            transferfCash: true,
+            receiver: LENDER,
+            maxImpliedRate: 0
+        }));
+    }
 }
