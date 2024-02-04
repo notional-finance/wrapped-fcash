@@ -7,6 +7,8 @@ contract TestWrapperERC1155 is BaseTest {
     address LENDER = makeAddr("Lender");
     wfCashERC4626 w;
     uint256 fCashId;
+    IERC20 asset;
+    uint256 precision;
 
     function setUp() public override {
         super.setUp();
@@ -35,6 +37,8 @@ contract TestWrapperERC1155 is BaseTest {
         NOTIONAL.batchBalanceAndTradeAction{value: 0.05e18}(LENDER, t);
 
         w = wfCashERC4626(factory.deployWrapper(ETH, maturity_3mo));
+        asset = IERC20(w.asset());
+        precision = 1e18;
         fCashId = w.getfCashId();
     }
 
@@ -113,5 +117,22 @@ contract TestWrapperERC1155 is BaseTest {
             receiver: LENDER,
             maxImpliedRate: 0
         }));
+    }
+
+    function test_LendAtZero_ETH_Refunds() public {
+        (/* */, uint256 maxFCash) = w.getTotalFCashAvailable();
+
+        asset.approve(address(w), type(uint256).max);
+        uint256 shares = maxFCash * 2;
+        uint256 previewAssets = w.previewMint(shares);
+        // Deposit excess to test refunds
+        deal(address(asset), LENDER, previewAssets * 2, true);
+
+        uint256 assetsBefore = asset.balanceOf(LENDER);
+        w.mintViaUnderlying(previewAssets * 2, uint88(shares), LENDER, 0);
+        uint256 assetsAfter = asset.balanceOf(LENDER);
+
+        // The method should only take sufficient assets to mint the required shares.
+        assertLe(previewAssets - (assetsBefore - assetsAfter), 1e10, "Deposit Amount");
     }
 }
