@@ -131,7 +131,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         uint256 postTradeCash = getCashBalance();
 
         if (preTradeCash != postTradeCash) {
-            // If ETH, then redeem to WETH (redeemToUnderlying == false)
+            // If ETH, then redeem to WETH (redeemToUnderlying == false), next line ensures
+            // that postTradeCash is always increasing from preTradeCash.
             NotionalV2.withdraw(currencyId, _safeUint88(postTradeCash - preTradeCash), !isETH);
         }
     }

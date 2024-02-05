@@ -152,5 +152,18 @@ contract TestWrapperERC1155 is BaseTest {
             int256 diff = int256(previewAssets) - int256(assetsBefore - assetsAfter);
             assertLe(diff < 0 ? -diff : diff, 1e10, "Deposit Amount");
         }
+
+        {
+            // Assert that reverts occur if attempting to use the existing cash balance
+            uint256 shares = maxFCash / 10;
+            uint256 previewAssets = w.previewMint(shares);
+
+            deal(address(asset), LENDER, previewAssets / 2, true);
+
+            // Expect a revert here on underflow because we have insufficient cash
+            // balance to lend
+            vm.expectRevert();
+            w.mintViaUnderlying(previewAssets / 2, uint88(shares), LENDER, 0);
+        }
     }
 }
