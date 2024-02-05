@@ -127,10 +127,14 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
 
         if (asset.tokenType == TokenType.NonMintable) {
             // In this case the asset token is the underlying
-            return (IERC20(asset.tokenAddress), asset.decimals);
+           underlyingToken = IERC20(asset.tokenAddress);
+           underlyingPrecision = asset.decimals;
         } else {
-            return (IERC20(underlying.tokenAddress), underlying.decimals);
+           underlyingToken = IERC20(underlying.tokenAddress);
+           underlyingPrecision = underlying.decimals;
         }
+
+        require(underlyingPrecision > 0);
     }
 
     /// @notice [Deprecated] is no longer used internal to the contract but left here to maintain
@@ -189,6 +193,7 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
     ) {
         // Get the present value of the fCash held by the contract, this is returned in 8 decimal precision
         (uint16 currencyId, uint40 maturity) = getDecodedID();
+        (/* */, int256 precision) = getUnderlyingToken();
 
         if (hasMatured()) {
             primeCashValue = _getMaturedCashValue(fCashAmount);
@@ -198,7 +203,6 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
             require(externalValue >= 0);
             pvExternalUnderlying = uint256(externalValue);
         } else {
-            (/* */, int256 precision) = getUnderlyingToken();
 
             int256 pvInternal = NotionalV2.getPresentfCashValue(
                 currencyId,
@@ -214,6 +218,13 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
 
             primeCashValue = uint256(cashValue);
             pvExternalUnderlying = uint256(pvExternal);
+        }
+
+        // Always truncate down anything lower than internal token precision
+        if (Constants.INTERNAL_TOKEN_PRECISION < precision) {
+            // Precision is checked to be positive in getUnderlyingToken
+            uint256 truncate = uint256(precision) / uint256(Constants.INTERNAL_TOKEN_PRECISION);
+            pvExternalUnderlying = pvExternalUnderlying / truncate * truncate;
         }
     }
 

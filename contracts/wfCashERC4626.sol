@@ -180,10 +180,13 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     /** @dev See {IERC4626-deposit} */
     function deposit(uint256 assets, address receiver) external override returns (uint256) {
         (uint256 shares, uint256 maxFCash) = _previewDeposit(assets);
-        // Short circuit zero shares minted
+        // Short circuit zero shares minted as well as matured fCash
         if (shares == 0) return 0;
 
-        // Will revert if matured
+        // This returns unused assets, since Notional always performs the equivalent of a 
+        // mint action, excess assets are turned to the msg.sender. In that case, the "assets"
+        // passed into this function are not actually used to mint shares, actually slightly less
+        // shares are minted than the amount of "assets" passed in.
         _mintInternal(assets, _safeUint88(shares), receiver, 0, maxFCash);
         emit Deposit(msg.sender, receiver, assets, shares);
         return shares;
@@ -208,6 +211,10 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         // it locally in storage.
         NotionalV2.settleAccount(address(this));
 
+        // Attempts to calculate how many shares are required to withdraw assets, however,
+        // _redeemInternal will always return to the receiver how much assets are raised by
+        // selling shares. This means that receiver may receive slightly less than the value
+        // of assets passed in.
         uint256 shares = previewWithdraw(assets);
 
         if (msg.sender != owner) {
