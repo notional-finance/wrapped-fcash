@@ -115,7 +115,20 @@ contract TestWrapperERC1155 is BaseTest {
             redeemToUnderlying: false,
             transferfCash: true,
             receiver: LENDER,
-            maxImpliedRate: 0
+            minUnderlyingOut: 0
+        }));
+    }
+
+    function test_RevertIf_SlippageOnRedeem() public {
+        NOTIONAL.safeTransferFrom(LENDER, address(w), fCashId, 0.05e8, "");
+        uint256 balance = w.balanceOf(LENDER);
+
+        vm.expectRevert("Slippage");
+        w.redeem(balance, IWrappedfCash.RedeemOpts({
+            redeemToUnderlying: true,
+            transferfCash: false,
+            receiver: LENDER,
+            minUnderlyingOut: 0.05e18
         }));
     }
 

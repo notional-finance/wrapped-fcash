@@ -12,7 +12,7 @@ interface IWrappedfCash {
         bool transferfCash;
         address receiver;
         // Zero signifies no maximum slippage
-        uint32 maxImpliedRate;
+        uint256 minUnderlyingOut;
     }
     function initialize(uint16 currencyId, uint40 maturity) external;
 
@@ -24,7 +24,7 @@ interface IWrappedfCash {
     ) external;
 
     function redeem(uint256 amount, RedeemOpts memory data) external;
-    function redeemToUnderlying(uint256 amount, address receiver, uint32 maxImpliedRate) external;
+    function redeemToUnderlying(uint256 amount, address receiver, uint256 minUnderlyingOut) external;
 
     /// @notice Returns the underlying fCash ID of the token
     function getfCashId() external view returns (uint256);

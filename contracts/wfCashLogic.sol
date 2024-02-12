@@ -190,7 +190,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     function redeemToUnderlying(
         uint256 amount,
         address receiver,
-        uint32 maxImpliedRate
+        uint256 minUnderlyingOut
     ) external override {
         _burnInternal(
             msg.sender,
@@ -199,7 +199,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 redeemToUnderlying: true,
                 transferfCash: false,
                 receiver: receiver,
-                maxImpliedRate: maxImpliedRate
+                minUnderlyingOut: minUnderlyingOut
             })
         );
     }
@@ -263,7 +263,10 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
             uint256 primeCashClaim = _getMaturedCashValue(fCashShares);
 
             // Transfer withdrawn tokens to the `from` address
-            _withdrawCashToAccount(currencyId, opts.receiver, _safeUint88(primeCashClaim));
+            uint256 tokensTransferred = _withdrawCashToAccount(
+                currencyId, opts.receiver, _safeUint88(primeCashClaim)
+            );
+            require(opts.minUnderlyingOut <= tokensTransferred, "Slippage");
         } else if (opts.transferfCash) {
             // If the fCash has not matured, then we can transfer it via ERC1155.
             // NOTE: this may fail if the destination is a contract and it does not implement 
@@ -277,7 +280,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 ""
             );
         } else {
-            _sellfCash(opts.receiver, fCashShares, opts.maxImpliedRate);
+            uint256 tokensTransferred = _sellfCash(opts.receiver, fCashShares);
+            require(opts.minUnderlyingOut <= tokensTransferred, "Slippage");
         }
     }
 
@@ -298,8 +302,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     /// @dev Sells an fCash share back on the Notional AMM
     function _sellfCash(
         address receiver,
-        uint256 fCashToSell,
-        uint32 maxImpliedRate
+        uint256 fCashToSell
     ) private returns (uint256 tokensTransferred) {
         (IERC20 token, bool isETH) = getToken(true);
         uint256 balanceBefore = isETH ? WETH.balanceOf(address(this)) : token.balanceOf(address(this));
@@ -334,7 +337,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 currencyId,
                 getMarketIndex(),
                 _safeUint88(fCashToSell),
-                maxImpliedRate
+                0 // Slippage is not checked here, it will be enforced in the calling function
+                  // via minUnderlyingOut
             );
             NotionalV2.batchBalanceAndTradeAction(address(this), action);
         }
