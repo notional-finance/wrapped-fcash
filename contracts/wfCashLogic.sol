@@ -42,7 +42,6 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         require(!hasMatured(), "fCash matured");
         (IERC20 token, bool isETH, bool hasTransferFee, uint256 precision) = _getTokenForMintInternal();
         uint256 balanceBefore = isETH ? WETH.balanceOf(address(this)) : token.balanceOf(address(this));
-        uint256 msgValue;
         uint16 currencyId = getCurrencyId();
         
         if (isETH) {
@@ -51,7 +50,6 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
             // NOTE: safeTransferFrom not required since WETH is known to be compatible
             IERC20((address(WETH))).transferFrom(msg.sender, address(this), depositAmountExternal);
             WETH.withdraw(depositAmountExternal);
-            msgValue = depositAmountExternal;
         } else {
             token.safeTransferFrom(msg.sender, address(this), depositAmountExternal);
             depositAmountExternal = token.balanceOf(address(this)) - balanceBefore;
@@ -62,11 +60,18 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
             uint256 fCashAmountExternal = fCashAmount * precision / uint256(Constants.INTERNAL_TOKEN_PRECISION);
             require(fCashAmountExternal <= depositAmountExternal);
 
+            uint256 msgValue;
+            if (isETH) {
+                msgValue = fCashAmountExternal;
+                // Re-wrap the residual ETH to send back to the account
+                WETH.deposit{value: depositAmountExternal - fCashAmountExternal}();
+            }
+
             // NOTE: Residual (depositAmountExternal - fCashAmountExternal) will be transferred
             // back to the account
             NotionalV2.depositUnderlyingToken{value: msgValue}(address(this), currencyId, fCashAmountExternal);
         } else if (isETH || hasTransferFee || getCashBalance() > 0) {
-            _lendLegacy(currencyId, depositAmountExternal, fCashAmount, minImpliedRate, msgValue, isETH);
+            _lendLegacy(currencyId, depositAmountExternal, fCashAmount, minImpliedRate, isETH);
         } else {
             // Executes a lending action on Notional. Since this lending action uses an existing cash balance
             // prior to pulling payment, we cannot use it if there is a cash balance on the wrapper contract,
@@ -96,7 +101,6 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         uint256 depositAmountExternal,
         uint88 fCashAmount,
         uint32 minImpliedRate,
-        uint256 msgValue,
         bool isETH
     ) internal {
         // If dealing in ETH, we use WETH in the wrapper instead of ETH. NotionalV2 uses
@@ -119,6 +123,7 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
             fCashAmount,
             minImpliedRate
         );
+        uint256 msgValue = isETH ? depositAmountExternal : 0;
         // Notional will return any residual ETH as the native token. When we _sendTokensToReceiver those
         // native ETH tokens will be wrapped back to WETH.
         NotionalV2.batchBalanceAndTradeAction{value: msgValue}(address(this), action);
@@ -126,7 +131,8 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
         uint256 postTradeCash = getCashBalance();
 
         if (preTradeCash != postTradeCash) {
-            // If ETH, then redeem to WETH (redeemToUnderlying == false)
+            // If ETH, then redeem to WETH (redeemToUnderlying == false), next line ensures
+            // that postTradeCash is always increasing from preTradeCash.
             NotionalV2.withdraw(currencyId, _safeUint88(postTradeCash - preTradeCash), !isETH);
         }
     }
