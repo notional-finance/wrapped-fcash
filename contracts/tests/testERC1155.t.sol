@@ -196,7 +196,7 @@ contract TestWrapperERC1155 is BaseTest {
             redeemToUnderlying: false,
             transferfCash: true,
             receiver: LENDER,
-            maxImpliedRate: 0
+            minUnderlyingOut: 0
         }));
     }
 }
