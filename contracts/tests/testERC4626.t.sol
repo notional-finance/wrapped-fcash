@@ -114,13 +114,13 @@ contract TestWrapperERC4626 is BaseTest {
         w.mint(1e8, LENDER);
     }
 
-    function test_RevertIf_Deposit_PostMaturity() public {
+    function test_Deposit_PostMaturity_noShares() public {
         vm.warp(maturity_3mo);
         NOTIONAL.initializeMarkets(DAI, false);
-        asset.approve(address(w), 5e18);
 
-        vm.expectRevert("fCash matured");
-        w.deposit(1e8, LENDER);
+        // Will return zero shares and then exit
+        uint256 shares = w.deposit(1e8, LENDER);
+        assertEq(shares, 0);
     }
 
     // Ensures that prime cash donations cannot manipulate the oracle value
@@ -222,7 +222,14 @@ contract TestWrapperERC4626 is BaseTest {
 
         asset.approve(address(w), type(uint256).max);
         uint256 shares = maxFCash * 2;
+        uint256 assetBefore = asset.balanceOf(LENDER);
+        uint256 expectedAssets = w.previewMint(shares);
+        uint256 expectedShares = w.previewDeposit(expectedAssets);
         w.mint(shares, LENDER);
+        uint256 assetAfter = asset.balanceOf(LENDER);
+
+        assertEq(expectedShares, shares, "Expected Shares");
+        assertEq(expectedAssets, assetBefore - assetAfter, "Expected Assets");
 
         (/* */, uint256 maxFCashAfter) = w.getTotalFCashAvailable();
         assertEq(maxFCashAfter, maxFCash);
