@@ -10,6 +10,12 @@ contract TestWrapperERC4626 is BaseTest {
     uint256 public fCashId;
     IERC20Metadata public asset;
 
+    function assertRelDiff(uint256 a, uint256 b, uint256 rel, string memory m) internal {
+        uint256 d = a > b ? a - b : b - a;
+        uint256 r = d * 1e9 / precision;
+        assertLe(r, rel, m);
+    }
+
     function setUp() public override {
         super.setUp();
         w = wfCashERC4626(factory.deployWrapper(DAI, maturity_3mo));
@@ -137,6 +143,30 @@ contract TestWrapperERC4626 is BaseTest {
         // Will return zero shares and then exit
         uint256 shares = w.deposit(1e8, LENDER);
         assertEq(shares, 0);
+    }
+
+    function test_assetValuation_PostMaturity() public {
+        vm.warp(maturity_3mo - 100);
+        uint256 assetsBefore = w.convertToAssets(1e8);
+        uint256 sharesBefore = w.convertToShares(precision);
+
+        vm.warp(maturity_3mo);
+        uint256 assetsAfterPriorInit = w.convertToAssets(1e8);
+        uint256 sharesAfterPriorInit = w.convertToShares(precision);
+        NOTIONAL.initializeMarkets(DAI, false);
+
+        uint256 assetsAfterInit = w.convertToAssets(1e8);
+        uint256 sharesAfterInit = w.convertToShares(precision);
+        assertRelDiff(assetsBefore, assetsAfterInit, 0.00001e9, "Settlement Value Change");
+        assertRelDiff(sharesBefore, sharesAfterInit, 0.00001e9, "Settlement Value Change");
+        assertEq(assetsAfterInit, assetsAfterPriorInit, "Settlement Value Change");
+        assertEq(sharesAfterInit, sharesAfterPriorInit, "Settlement Value Change");
+
+        vm.warp(maturity_3mo + 60);
+        uint256 assetsAfter = w.convertToAssets(1e8);
+        uint256 sharesAfter = w.convertToShares(precision);
+        assertEq(assetsAfter, assetsAfterInit, "Settlement Value Change");
+        assertEq(sharesAfter, sharesAfterInit, "Settlement Value Change");
     }
 
     // Ensures that prime cash donations cannot manipulate the oracle value

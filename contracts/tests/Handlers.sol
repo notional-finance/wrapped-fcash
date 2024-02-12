@@ -152,6 +152,7 @@ contract DepositMintHandler is BaseHandler {
 
         assertEq(previewValue, shares, "Deposit Shares");
         assertEq(sharesAfter - sharesBefore, shares, "Deposit Shares");
+        console.log("Asset Diff in Deposit", assets - (assetsBefore - assetsAfter));
         assertLe(assets - (assetsBefore - assetsAfter), roundingPrecision, "Deposit Amount");
 
         totalShares += shares;
@@ -173,7 +174,7 @@ contract DepositMintHandler is BaseHandler {
 
         assertEq(previewValue, assets, "Mint Assets");
         assertEq(sharesAfter - sharesBefore, shares, "Mint Shares");
-        assertLe(assets - (assetsBefore - assetsAfter), roundingPrecision, "Mint Amount");
+        assertLe(assets - (assetsBefore - assetsAfter), 0, "Mint Amount");
 
         totalShares += shares;
     }
@@ -233,7 +234,7 @@ contract RedeemWithdrawHandler is BaseHandler {
         assertEq(sharesBefore - sharesAfter, shares, " Redeem Shares");
         assertAbsDiff(previewValue, assets, 5 * roundingPrecision, "Redeem Preview");
 
-        assertAbsDiff(assets, (assetsAfter - assetsBefore), roundingPrecision, " Redeem Amount");
+        assertAbsDiff(assets, (assetsAfter - assetsBefore), 0, " Redeem Amount");
 
         totalShares -= shares;
     }
@@ -263,6 +264,7 @@ contract RedeemWithdrawHandler is BaseHandler {
 
         assertEq(previewValue, shares, "Withdraw Preview");
         assertEq(sharesBefore - sharesAfter, shares, "Withdraw Shares");
+        console.log("Abs Diff in Withdraw", assets - (assetsAfter - assetsBefore));
         assertAbsDiff(assets, (assetsAfter - assetsBefore), 5 * roundingPrecision, "Withdraw Amount");
 
         totalShares -= shares;
