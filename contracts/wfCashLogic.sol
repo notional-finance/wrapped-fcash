@@ -279,6 +279,11 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
                 fCashShares, // Amount of fCash to send
                 ""
             );
+
+            // Double check that we don't incur debt, this can happen if the wrapper has
+            // lent a cash balance and there is actually insufficient fCash to remove.
+            AccountContext memory ac = NotionalV2.getAccountContext(address(this));
+            require(ac.hasDebt == 0x00);
         } else {
             uint256 tokensTransferred = _sellfCash(opts.receiver, fCashShares);
             require(opts.minUnderlyingOut <= tokensTransferred, "Slippage");

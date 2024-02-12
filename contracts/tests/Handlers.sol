@@ -274,7 +274,9 @@ contract RedeemWithdrawHandler is BaseHandler {
         redeemShare = bound(redeemShare, 1, 100);
         uint256 balance = wrapper.balanceOf(currentActor);
         uint256 notionalBefore = NOTIONAL.balanceOf(currentActor, fCashId);
+        uint256 wrapperBalance = NOTIONAL.balanceOf(address(wrapper), fCashId);
         uint256 redeemAmount = balance * redeemShare / 100;
+        if (wrapperBalance < redeemAmount) redeemAmount = wrapperBalance;
 
         wrapper.redeem(redeemAmount, IWrappedfCash.RedeemOpts({
             redeemToUnderlying: false,
@@ -283,6 +285,8 @@ contract RedeemWithdrawHandler is BaseHandler {
             minUnderlyingOut: 0
         }));
 
+        uint256 wrapperBalanceAfter = NOTIONAL.balanceOf(address(wrapper), fCashId);
+        assertGe(wrapperBalanceAfter, 0);
         assertEq(wrapper.balanceOf(currentActor), balance - redeemAmount, "Wrapper Balance");
         assertEq(NOTIONAL.balanceOf(currentActor, fCashId), notionalBefore + redeemAmount, "Notional Balance");
         totalShares -= redeemAmount;
