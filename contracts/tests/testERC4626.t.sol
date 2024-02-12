@@ -329,4 +329,36 @@ contract TestWrapperERC4626 is BaseTest {
         uint256 assets = w.redeem(w.balanceOf(LENDER), LENDER, LENDER);
         assertAbsDiff(assets, 1000e18, 1e10, "Asset Value Change");
     }
+
+    function test_recoverExcessPrimeCash() public {
+        (uint256 totalfCash, uint256 maxFCash) = w.getTotalFCashAvailable();
+        deal(address(asset), LENDER, totalfCash * 5 * precision / 1e8, true);
+
+        asset.approve(address(w), type(uint256).max);
+        uint256 shares = maxFCash * 2;
+        w.mint(shares, LENDER);
+
+        // wait until maturity and then withdraw....
+        vm.warp(maturity_3mo);
+        NOTIONAL.initializeMarkets(DAI, false);
+
+        w.redeem(shares, LENDER, LENDER);
+
+        assertEq(w.totalSupply(), 0);
+        assertGt(w.getCashBalance(), 0);
+        vm.stopPrank();
+
+        vm.prank(LENDER);
+        vm.expectRevert();
+        // Only the owner can call this method
+        w.recoverPrimeCash();
+
+        uint256 balanceBefore = asset.balanceOf(NOTIONAL.owner());
+        vm.prank(NOTIONAL.owner());
+        w.recoverPrimeCash();
+        uint256 balanceAfter = asset.balanceOf(NOTIONAL.owner());
+
+        assertEq(w.getCashBalance(), 0);
+        assertGt(balanceAfter, balanceBefore);
+    }
 }
