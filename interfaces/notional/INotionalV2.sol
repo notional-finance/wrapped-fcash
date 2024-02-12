@@ -25,6 +25,11 @@ interface INotionalV2 {
             uint256 lastClaimTime
         );
 
+    function getSettlementRate(uint16 currencyId, uint40 maturity)
+        external
+        view
+        returns (PrimeRate memory);
+
    function getfCashLendFromDeposit(
         uint16 currencyId,
         uint256 depositAmountExternal,
@@ -83,6 +88,11 @@ interface INotionalV2 {
         bool useUnderlying
     ) external view returns (int256);
 
+    function convertUnderlyingToPrimeCash(
+        uint16 currencyId,
+        int256 underlyingExternal
+    ) external view returns (int256);
+
     function getPresentfCashValue(
         uint16 currencyId,
         uint256 maturity,
@@ -99,6 +109,14 @@ interface INotionalV2 {
         bytes calldata data
     ) external payable;
 
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] calldata id,
+        uint256[] calldata amount,
+        bytes calldata data
+    ) external payable;
+
     function settleAccount(address account) external;
 
     function withdraw(
@@ -106,6 +124,14 @@ interface INotionalV2 {
         uint88 amountInternalPrecision,
         bool redeemToUnderlying
     ) external returns (uint256);
+
+    function depositUnderlyingToken(
+        address account,
+        uint16 currencyId,
+        uint256 amountExternalPrecision
+    ) external payable returns (uint256);
+
+    function getActiveMarkets(uint16 currencyId) external view returns (MarketParameters[] memory);
 
     function batchBalanceAndTradeAction(address account, BalanceActionWithTrades[] calldata actions)
         external
@@ -116,4 +142,8 @@ interface INotionalV2 {
     function owner() external view returns (address);
 
     function balanceOf(address account, uint256 id) external view returns (uint256);
+
+    function initializeMarkets(uint16 currencyId, bool isFirstInit) external;
+
+    function pCashAddress(uint16 currencyId) external view returns (address);
 }

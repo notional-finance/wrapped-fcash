@@ -11,3 +11,4 @@ chaindb/
 .pytest_cache/
 .env
 artifacts/
+out/

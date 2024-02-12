@@ -13,39 +13,21 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         return isETH ? address(WETH) : address(underlyingToken);
     }
 
-    function _getMaturedValue() private view returns (uint256) {
-        // If the fCash has matured we use the cash balance instead.
-        uint16 currencyId = getCurrencyId();
-        // We cannot settle an account in a view method, so this may fail if the account has not been settled
-        // after maturity. This can be done by anyone so it should not be an issue
-        (int256 cashBalance, /* */, /* */) = NotionalV2.getAccountBalance(currencyId, address(this));
-        int256 underlyingExternal = NotionalV2.convertCashBalanceToExternal(currencyId, cashBalance, true);
-        require(underlyingExternal > 0, "Must Settle");
-
-        return uint256(underlyingExternal);
-    }
-
-    function _getPresentValue(uint256 fCashAmount) private view returns (uint256) {
-        (/* */, int256 precision) = getUnderlyingToken();
-        // Get the present value of the fCash held by the contract, this is returned in 8 decimal precision
-        (uint16 currencyId, uint40 maturity) = getDecodedID();
-        int256 pvInternal = NotionalV2.getPresentfCashValue(
-            currencyId,
-            maturity,
-            int256(fCashAmount), // total supply cannot overflow as fCash overflows at uint88
-            block.timestamp,
-            false
-        );
-
-        int256 pvExternal = (pvInternal * precision) / Constants.INTERNAL_TOKEN_PRECISION;
-        // PV should always be >= 0 since we are lending
-        require(pvExternal >= 0);
-        return uint256(pvExternal);
-    }
-
-    /** @dev See {IERC4626-totalAssets} */
-    function totalAssets() public view override returns (uint256) {
-        return hasMatured() ?  _getMaturedValue() : _getPresentValue(totalSupply());
+    /** 
+     * @notice Although not explicitly required by ERC4626 standards, this totalAssets method
+     * is expected to be manipulation resistant because it queries an internal Notional V2 TWAP
+     * of the fCash interest rate. This means that the value here along with `convertToAssets`
+     * and `convertToShares` can be used as an on-chain price oracle.
+     *
+     * If the wrapper is holding a cash balance prior to maturity, the total value of assets held
+     * by the contract will exceed what is returned by this function. The value of the excess value
+     * should never be accessible by Wrapped fCash holders due to the redemption mechanism, therefore
+     * the lower reported value is correct.
+     *
+     * @dev See {IERC4626-totalAssets}
+     */
+    function totalAssets() public view override returns (uint256 pvExternal) {
+        (/* */, pvExternal) = _getPresentCashValue(totalSupply());
     }
 
     /** @dev See {IERC4626-convertToShares} */
@@ -53,7 +35,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         uint256 supply = totalSupply();
         if (supply == 0) {
             // Scales assets by the value of a single unit of fCash
-            uint256 unitfCashValue = _getPresentValue(uint256(Constants.INTERNAL_TOKEN_PRECISION));
+            (/* */, uint256 unitfCashValue) = _getPresentCashValue(uint256(Constants.INTERNAL_TOKEN_PRECISION));
             return (assets * uint256(Constants.INTERNAL_TOKEN_PRECISION)) / unitfCashValue;
         }
 
@@ -65,10 +47,10 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         uint256 supply = totalSupply();
         if (supply == 0) {
             // Catch the edge case where totalSupply causes a divide by zero error
-            return _getPresentValue(shares);
+            (/* */, assets) = _getPresentCashValue(shares);
+        } else {
+            assets = (shares * totalAssets()) / supply;
         }
-
-        return (shares * totalAssets()) / supply;
     }
 
     /** @dev See {IERC4626-maxDeposit} */
@@ -83,7 +65,7 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4626-maxWithdraw} */
     function maxWithdraw(address owner) external view override returns (uint256) {
-        return previewWithdraw(balanceOf(owner));
+        return previewRedeem(balanceOf(owner));
     }
 
     /** @dev See {IERC4626-maxRedeem} */
@@ -92,48 +74,67 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     }
 
     /** @dev See {IERC4626-previewDeposit} */
-    function previewDeposit(uint256 assets) public view override returns (uint256) {
-        if (hasMatured()) {
-            return 0;
-        } else {
-            // This is how much fCash received from depositing assets
-            (uint16 currencyId, uint40 maturity) = getDecodedID();
-            (uint256 fCashAmount, /* */, /* */) = NotionalV2.getfCashLendFromDeposit(
-                currencyId,
-                assets,
-                maturity,
-                0,
-                block.timestamp,
-                true
-            );
+    function _previewDeposit(uint256 assets) internal view returns (uint256 shares, uint256 maxFCash) {
+        if (hasMatured()) return (0, 0);
+        // This is how much fCash received from depositing assets
+        (uint16 currencyId, uint40 maturity) = getDecodedID();
+        (/* */, maxFCash) = getTotalFCashAvailable();
 
-            return fCashAmount;
+        // This method reverts when lending cannot successfully occur.
+        try NotionalV2.getfCashLendFromDeposit(
+            currencyId,
+            assets,
+            maturity,
+            0,
+            block.timestamp,
+            true
+        ) returns (uint88 s, uint8, bytes32) {
+            shares = s;
+        } catch {
+            (/* */, int256 precision) = getUnderlyingToken();
+            require(precision > 0);
+            // In this case, will lend at zero which is 1-1 with assets.
+            shares = assets * uint256(Constants.INTERNAL_TOKEN_PRECISION) / uint256(precision);
         }
     }
 
+    function previewDeposit(uint256 assets) public view override returns (uint256 shares) {
+        (shares, /* */) = _previewDeposit(assets);
+    }
+
     /** @dev See {IERC4626-previewMint} */
-    function previewMint(uint256 shares) public view override returns (uint256) {
-        if (hasMatured()) {
-            return 0;
+    function _previewMint(uint256 shares) internal view returns (uint256 assets, uint256 maxFCash) {
+        if (hasMatured()) return (0, 0);
+
+        // This is how much fCash received from depositing assets
+        (uint16 currencyId, uint40 maturity) = getDecodedID();
+        (/* */, maxFCash) = getTotalFCashAvailable();
+        if (maxFCash < shares) {
+            (/* */, int256 precision) = getUnderlyingToken();
+            require(precision > 0);
+            // Lending at zero interest means that 1 fCash unit is equivalent to 1 asset unit
+            assets = shares * uint256(precision) / uint256(Constants.INTERNAL_TOKEN_PRECISION);
         } else {
-            // This is how much fCash received from depositing assets
-            (uint16 currencyId, uint40 maturity) = getDecodedID();
             // This method will round up when calculating the depositAmountUnderlying (happens inside
             // CalculationViews._convertToAmountExternal).
-            (uint256 depositAmountUnderlying, /* */, /* */, /* */) = NotionalV2.getDepositFromfCashLend(
+            (assets, /* */, /* */, /* */) = NotionalV2.getDepositFromfCashLend(
                 currencyId,
                 shares,
                 maturity,
                 0,
                 block.timestamp
             );
-
-            return depositAmountUnderlying;
         }
+    }
+
+    function previewMint(uint256 shares) public view override returns (uint256 assets) {
+        (assets, /* */) = _previewMint(shares);
     }
 
     /** @dev See {IERC4626-previewWithdraw} */
     function previewWithdraw(uint256 assets) public view override returns (uint256 shares) {
+        if (assets == 0) return 0;
+
         // Although the ERC4626 standard suggests that shares is rounded up in this calculation,
         // it would not have much of an effect for wrapped fCash in practice. The actual amount
         // of assets returned to the user is not dictated by the `assets` parameter supplied here
@@ -159,6 +160,8 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4626-previewRedeem} */
     function previewRedeem(uint256 shares) public view override returns (uint256 assets) {
+        if (shares == 0) return 0;
+
         if (hasMatured()) {
             assets = convertToAssets(shares);
         } else {
@@ -176,18 +179,24 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
 
     /** @dev See {IERC4626-deposit} */
     function deposit(uint256 assets, address receiver) external override returns (uint256) {
-        uint256 shares = previewDeposit(assets);
-        // Will revert if matured
-        _mintInternal(assets, _safeUint88(shares), receiver, 0, true);
+        (uint256 shares, uint256 maxFCash) = _previewDeposit(assets);
+        // Short circuit zero shares minted as well as matured fCash
+        if (shares == 0) return 0;
+
+        // This returns unused assets, since Notional always performs the equivalent of a 
+        // mint action, excess assets are turned to the msg.sender. In that case, the "assets"
+        // passed into this function are not actually used to mint shares, actually slightly less
+        // shares are minted than the amount of "assets" passed in.
+        _mintInternal(assets, _safeUint88(shares), receiver, 0, maxFCash);
         emit Deposit(msg.sender, receiver, assets, shares);
         return shares;
     }
 
     /** @dev See {IERC4626-mint} */
     function mint(uint256 shares, address receiver) external override returns (uint256) {
-        uint256 assets = previewMint(shares);
+        (uint256 assets, uint256 maxFCash) = _previewMint(shares);
         // Will revert if matured
-        _mintInternal(assets, _safeUint88(shares), receiver, 0, true);
+        _mintInternal(assets, _safeUint88(shares), receiver, 0, maxFCash);
         emit Deposit(msg.sender, receiver, assets, shares);
         return assets;
     }
@@ -202,6 +211,10 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
         // it locally in storage.
         NotionalV2.settleAccount(address(this));
 
+        // Attempts to calculate how many shares are required to withdraw assets, however,
+        // _redeemInternal will always return to the receiver how much assets are raised by
+        // selling shares. This means that receiver may receive slightly less than the value
+        // of assets passed in.
         uint256 shares = previewWithdraw(assets);
 
         if (msg.sender != owner) {
@@ -248,7 +261,8 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
                 redeemToUnderlying: true,
                 transferfCash: false,
                 receiver: receiver,
-                maxImpliedRate: 0
+                // No slippage protecting in ERC4626 natively
+                minUnderlyingOut: 0
             })
         );
     }

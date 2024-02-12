@@ -43,12 +43,11 @@ library EncodeDecode {
         uint16 currencyId,
         uint8 marketIndex,
         uint88 fCashAmount,
-        uint32 minImpliedRate,
-        bool useUnderlying
+        uint32 minImpliedRate
     ) internal pure returns (BatchLend[] memory action) {
         action = new BatchLend[](1);
         action[0].currencyId = currencyId;
-        action[0].depositUnderlying = useUnderlying;
+        action[0].depositUnderlying = true;
         action[0].trades = new bytes32[](1);
         action[0].trades[0] = bytes32(
             (uint256(uint8(TradeActionType.Lend)) << 248) |
@@ -63,16 +62,14 @@ library EncodeDecode {
         uint8 marketIndex,
         uint256 depositAmountExternal,
         uint88 fCashAmount,
-        uint32 minImpliedRate,
-        bool useUnderlying,
-        bool isNonMintable
+        uint32 minImpliedRate
     ) internal pure returns (BalanceActionWithTrades[] memory action) {
         action = new BalanceActionWithTrades[](1);
-        action[0].actionType = useUnderlying ? DepositActionType.DepositUnderlying : DepositActionType.DepositAsset;
+        action[0].actionType = DepositActionType.DepositUnderlying;
         action[0].currencyId = currencyId;
         action[0].depositActionAmount = depositAmountExternal;
-        action[0].withdrawEntireCashBalance = true;
-        action[0].redeemToUnderlying = isNonMintable ? false : true;
+        action[0].withdrawEntireCashBalance = false;
+        action[0].redeemToUnderlying = true;
         action[0].trades = new bytes32[](1);
         action[0].trades[0] = bytes32(
             (uint256(uint8(TradeActionType.Lend)) << 248) |
@@ -86,14 +83,13 @@ library EncodeDecode {
         uint16 currencyId,
         uint8 marketIndex,
         uint88 fCashAmount,
-        uint32 maxImpliedRate,
-        bool toUnderlying
+        uint32 maxImpliedRate
     ) internal pure returns (BalanceActionWithTrades[] memory action) {
         action = new BalanceActionWithTrades[](1);
         action[0].actionType = DepositActionType.None;
         action[0].currencyId = currencyId;
-        action[0].withdrawEntireCashBalance = true;
-        action[0].redeemToUnderlying = toUnderlying;
+        action[0].withdrawEntireCashBalance = false;
+        action[0].redeemToUnderlying = true;
         action[0].trades = new bytes32[](1);
         action[0].trades[0] = bytes32(
             (uint256(uint8(TradeActionType.Borrow)) << 248) |

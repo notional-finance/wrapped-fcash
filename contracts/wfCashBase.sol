@@ -16,6 +16,13 @@ import "@openzeppelin-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
     using SafeERC20 for IERC20;
 
+    // This is the empirically measured maximum amount of fCash that can be lent. Lending
+    // the fCashAmount down to zero is not possible due to rounding errors and fees inside
+    // the liquidity curve.
+    uint256 internal constant MAX_LEND_LIMIT = 1e9 - 50;
+    // Below this absolute number we consider the max fcash to be zero
+    uint256 internal constant MIN_FCASH_FLOOR = 50_000;
+
     /// @notice address to the NotionalV2 system
     INotionalV2 public immutable NotionalV2;
     WETH9 public immutable WETH;
@@ -49,7 +56,6 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         _fCashId = uint64(fCashId);
 
         (IERC20 underlyingToken, /* */) = getUnderlyingToken();
-        (IERC20 assetToken, /* */, /* */) = getAssetToken();
 
         string memory _symbol = address(underlyingToken) == Constants.ETH_ADDRESS
             ? "ETH"
@@ -64,13 +70,7 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
             string(abi.encodePacked("wf", _symbol, ":", _maturity))
         );
 
-        // Set approvals for Notional. It is possible for an asset token address to equal the underlying
-        // token address when there is no money market involved.
-        assetToken.safeApprove(address(NotionalV2), type(uint256).max);
-        if (
-            address(assetToken) != address(underlyingToken) &&
-            address(underlyingToken) != Constants.ETH_ADDRESS
-        ) {
+        if (address(underlyingToken) != Constants.ETH_ADDRESS) {
             underlyingToken.safeApprove(address(NotionalV2), type(uint256).max);
         }
     }
@@ -127,15 +127,23 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
 
         if (asset.tokenType == TokenType.NonMintable) {
             // In this case the asset token is the underlying
-            return (IERC20(asset.tokenAddress), asset.decimals);
+           underlyingToken = IERC20(asset.tokenAddress);
+           underlyingPrecision = asset.decimals;
         } else {
-            return (IERC20(underlying.tokenAddress), underlying.decimals);
+           underlyingToken = IERC20(underlying.tokenAddress);
+           underlyingPrecision = underlying.decimals;
         }
+
+        require(underlyingPrecision > 0);
     }
 
-    /// @notice Returns the asset token which the fCash settles to. This will be an interest
-    /// bearing token like a cToken or aToken.
-    function getAssetToken() public view override returns (IERC20 assetToken, int256 underlyingPrecision, TokenType tokenType) {
+    /// @notice [Deprecated] is no longer used internal to the contract but left here to maintain
+    /// compatibility with previous interface
+    function getAssetToken() public view override returns (
+        IERC20 assetToken,
+        int256 underlyingPrecision,
+        TokenType tokenType
+    ) {
         (Token memory asset, /* Token memory underlying */) = NotionalV2.getCurrency(getCurrencyId());
         return (IERC20(asset.tokenAddress), asset.decimals, asset.tokenType);
     }
@@ -149,22 +157,103 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
         isETH = address(token) == Constants.ETH_ADDRESS;
     }
 
-    /// @dev Internal method with more flags required for use inside mint internal
-    function _getTokenForMintInternal(bool useUnderlying) internal view returns (
-        IERC20 token, bool isETH, bool hasTransferFee, bool isNonMintable
-    ) {
-        (Token memory asset, Token memory underlying) = NotionalV2.getCurrency(getCurrencyId());
+    function getTotalFCashAvailable() public view returns (uint256, uint256) {
+        uint8 marketIndex = getMarketIndex();
+        if (marketIndex == 0) return (0, 0);
+        MarketParameters[] memory markets = NotionalV2.getActiveMarkets(getCurrencyId());
+        require(marketIndex <= markets.length);
 
-        isNonMintable = asset.tokenType == TokenType.NonMintable;
-        if (isNonMintable || !useUnderlying) {
-            token = IERC20(asset.tokenAddress);
-            hasTransferFee = asset.hasTransferFee;
-        } else if (useUnderlying) {
-            token = IERC20(underlying.tokenAddress);
-            hasTransferFee = underlying.hasTransferFee;
+        int256 totalfCash = markets[marketIndex - 1].totalfCash;
+        require(totalfCash > 0);
+
+        uint256 maxFCash = uint256(totalfCash) * MAX_LEND_LIMIT / 1e9;
+        if (maxFCash < MIN_FCASH_FLOOR) maxFCash = 0;
+
+        return (uint256(totalfCash), maxFCash);
+    }
+
+    /// @notice Returns the cash balance held by the account, if any.
+    function getCashBalance() public view returns (uint256) {
+        (int256 cash, /* */, /* */) = NotionalV2.getAccountBalance(getCurrencyId(), address(this));
+        require(cash >= 0);
+        return uint256(cash);
+    }
+
+    /// @notice Returns the cash balance and fCash balance held by the account
+    function getBalances() public view returns (uint256 cashBalance, uint256 fCashBalance) {
+        cashBalance = getCashBalance();
+        fCashBalance = NotionalV2.balanceOf(address(this), _fCashId);
+    }
+
+    /// @notice Returns the current value of fCash regardless of whether or not it has
+    /// been settled. Used to return asset valuations in ERC4626 methods.
+    function _getPresentCashValue(uint256 fCashAmount) internal view returns (
+        uint256 primeCashValue,
+        uint256 pvExternalUnderlying
+    ) {
+        // Get the present value of the fCash held by the contract, this is returned in 8 decimal precision
+        (uint16 currencyId, uint40 maturity) = getDecodedID();
+        (/* */, int256 precision) = getUnderlyingToken();
+
+        if (hasMatured()) {
+            primeCashValue = _getMaturedCashValue(fCashAmount);
+            int256 externalValue = NotionalV2.convertCashBalanceToExternal(
+                currencyId, int256(primeCashValue), true
+            );
+            require(externalValue >= 0);
+            pvExternalUnderlying = uint256(externalValue);
+        } else {
+
+            int256 pvInternal = NotionalV2.getPresentfCashValue(
+                currencyId,
+                maturity,
+                int256(fCashAmount),
+                block.timestamp,
+                false
+            );
+            int256 pvExternal = pvInternal * precision / Constants.INTERNAL_TOKEN_PRECISION;
+            require(pvExternal >= 0);
+            int256 cashValue = NotionalV2.convertUnderlyingToPrimeCash(currencyId, pvExternal);
+            require(cashValue >= 0);
+
+            primeCashValue = uint256(cashValue);
+            pvExternalUnderlying = uint256(pvExternal);
         }
 
+        // Always truncate down anything lower than internal token precision
+        if (Constants.INTERNAL_TOKEN_PRECISION < precision) {
+            // Precision is checked to be positive in getUnderlyingToken
+            uint256 truncate = uint256(precision) / uint256(Constants.INTERNAL_TOKEN_PRECISION);
+            pvExternalUnderlying = pvExternalUnderlying / truncate * truncate;
+        }
+    }
+
+    /// @notice Returns the matured prime cash value of an fCash amount. Settlement rates will
+    /// be up to date at the current block until they are set via initialize markets.
+    function _getMaturedCashValue(uint256 fCashAmount) internal view returns (uint256) {
+        require(hasMatured());
+        // If the fCash has matured we use the cash balance instead.
+        (uint16 currencyId, uint40 maturity) = getDecodedID();
+
+        // The settlement rate will always be returned up to the current supplyFactor
+        // here even if the settlement rate is not yet set.
+        PrimeRate memory pr = NotionalV2.getSettlementRate(currencyId, maturity);
+        require(pr.supplyFactor > 0);
+
+        return fCashAmount * Constants.DOUBLE_SCALAR_PRECISION / uint256(pr.supplyFactor);
+    }
+
+    /// @dev Internal method with more flags required for use inside mint internal
+    function _getTokenForMintInternal() internal view returns (
+        IERC20 token, bool isETH, bool hasTransferFee, uint256 precision
+    ) {
+        (/* */, Token memory underlying) = NotionalV2.getCurrency(getCurrencyId());
+        token = IERC20(underlying.tokenAddress);
+        hasTransferFee = underlying.hasTransferFee;
         isETH = address(token) == Constants.ETH_ADDRESS;
+
+        require(underlying.decimals > 0);
+        precision = uint256(underlying.decimals);
     }
 
     /**
