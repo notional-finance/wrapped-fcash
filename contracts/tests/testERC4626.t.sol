@@ -114,13 +114,13 @@ contract TestWrapperERC4626 is BaseTest {
         w.mint(1e8, LENDER);
     }
 
-    function test_RevertIf_Deposit_PostMaturity() public {
+    function test_Deposit_PostMaturity_noShares() public {
         vm.warp(maturity_3mo);
         NOTIONAL.initializeMarkets(DAI, false);
-        asset.approve(address(w), 5e18);
 
-        vm.expectRevert("fCash matured");
-        w.deposit(1e8, LENDER);
+        // Will return zero shares and then exit
+        uint256 shares = w.deposit(1e8, LENDER);
+        assertEq(shares, 0);
     }
 
     // Ensures that prime cash donations cannot manipulate the oracle value

@@ -192,6 +192,9 @@ contract wfCashERC4626 is IERC4626, wfCashLogic {
     /** @dev See {IERC4626-deposit} */
     function deposit(uint256 assets, address receiver) external override returns (uint256) {
         (uint256 shares, uint256 maxFCash) = _previewDeposit(assets);
+        // Short circuit zero shares minted
+        if (shares == 0) return 0;
+
         // Will revert if matured
         _mintInternal(assets, _safeUint88(shares), receiver, 0, maxFCash);
         emit Deposit(msg.sender, receiver, assets, shares);
