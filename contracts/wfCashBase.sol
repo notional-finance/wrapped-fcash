@@ -41,14 +41,11 @@ abstract contract wfCashBase is ERC20Upgradeable, IWrappedfCash {
     /// @notice Initializes a proxy for a specific fCash asset
     function initialize(uint16 currencyId, uint40 maturity) external override initializer {
         CashGroupSettings memory cashGroup = NotionalV2.getCashGroup(currencyId);
-        require(cashGroup.maxMarketIndex > 0, "Invalid currency");
-        require(maturity > block.timestamp, "Invalid maturity");
+        require(cashGroup.maxMarketIndex > 0);
+        require(maturity > block.timestamp);
         // Ensure that the maturity is not past the max market index, also ensure that the maturity
         // is not in the past. This statement will allow idiosyncratic (non-tradable) fCash assets.
-        require(
-            DateTime.isValidMaturity(cashGroup.maxMarketIndex, maturity, block.timestamp),
-            "Invalid maturity"
-        );
+        require(DateTime.isValidMaturity(cashGroup.maxMarketIndex, maturity, block.timestamp));
 
         // Get the corresponding fCash ID
         uint256 fCashId = EncodeDecode.encodeERC1155Id(currencyId, maturity, Constants.FCASH_ASSET_TYPE);

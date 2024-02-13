@@ -51,21 +51,21 @@ contract TestWrapperERC1155 is BaseTest {
         beacon.upgradeTo(newImpl);
 
         vm.prank(LENDER);
-        vm.expectRevert("Invalid");
+        vm.expectRevert();
         NOTIONAL.safeTransferFrom(LENDER, address(w), fCashId, 0.05e8, "");
     }
 
     function test_RevertIfInvalidCurrency() public {
         wfCashERC4626 w2 = wfCashERC4626(factory.deployWrapper(DAI, maturity_3mo));
 
-        vm.expectRevert("Invalid");
+        vm.expectRevert();
         NOTIONAL.safeTransferFrom(LENDER, address(w2), fCashId, 0.05e8, "");
     }
 
     function test_RevertIfInvalidMaturity() public {
         wfCashERC4626 w2 = wfCashERC4626(factory.deployWrapper(ETH, maturity_6mo));
 
-        vm.expectRevert("Invalid");
+        vm.expectRevert();
         NOTIONAL.safeTransferFrom(LENDER, address(w2), fCashId, 0.05e8, "");
     }
 

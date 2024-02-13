@@ -20,7 +20,7 @@ abstract contract BaseTest is Test {
     nUpgradeableBeacon beacon;
     WrappedfCashFactory factory;
 
-    string ARBITRUM_RPC_URL = vm.envString("ARBITRUM_RPC_URL");
+    string ARBITRUM_RPC_URL = vm.envString("ARB_RPC_URL");
     uint256 ARBITRUM_FORK_BLOCK = 133312145;
 
     event WrapperDeployed(uint16 currencyId, uint40 maturity, address wrapper);

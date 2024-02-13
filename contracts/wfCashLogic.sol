@@ -153,11 +153,11 @@ abstract contract wfCashLogic is wfCashBase, ReentrancyGuardUpgradeable {
     ) external nonReentrant returns (bytes4) {
         uint256 fCashID = getfCashId();
         // Only accept erc1155 transfers from NotionalV2
-        require(msg.sender == address(NotionalV2), "Invalid");
+        require(msg.sender == address(NotionalV2));
         // Only accept the fcash id that corresponds to the listed currency and maturity
-        require(_id == fCashID, "Invalid");
+        require(_id == fCashID);
         // Protect against signed value underflows
-        require(int256(_value) > 0, "Invalid");
+        require(int256(_value) > 0);
 
         // Double check the account's position, these are not strictly necessary and add gas costs
         // but might be good safe guards
