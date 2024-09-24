@@ -4,7 +4,13 @@ Wrapped fCash (wfCash) is a compatibility layer for developers who want to integ
 
 Technical Walkthrough: https://www.youtube.com/watch?v=RvCYFR2Yjls
 
-Audits: TBD
+Audits:
+   1. [Wrapped fCash, Code Arena | Jul 2022](https://code4rena.com/reports/2022-06-notional-coop/)
+   1. [External Lending, Wrapped fCash | Jan 2024](https://audits.sherlock.xyz/contests/142)
+
+Wrapped fCash Factory Deployments:
+   Mainnet: https://etherscan.io/address/0x56408a51b96609c10B005a2fc599ee36b534d01b
+   Arbitrum: https://arbiscan.io/address/0x5D051DeB5db151C2172dCdCCD42e6A2953E27261
 
 ## Deployment
 
