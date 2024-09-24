@@ -13,24 +13,29 @@ import "../interfaces/notional/INotionalV2.sol";
 import "../interfaces/WETH9.sol";
 
 contract Upgrade is Script, Test {
-    WETH9 constant WETH = WETH9(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
-    INotionalV2 constant NOTIONAL = INotionalV2(0x1344A36A1B56144C3Bc62E7757377D288fDE0369);
-    nUpgradeableBeacon constant beacon = nUpgradeableBeacon(0xD676d720E4e8B14F545F9116F0CAD47aF32329DD);
-    WrappedfCashFactory constant factory = WrappedfCashFactory(0x5D051DeB5db151C2172dCdCCD42e6A2953E27261);
+    WETH9 constant WETH = WETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    INotionalV2 constant NOTIONAL = INotionalV2(0x6e7058c91F85E0F6db4fc9da2CA41241f5e4263f);
+    nUpgradeableBeacon constant beacon = nUpgradeableBeacon(0xEBe1BF1653d55d31F6ED38B1A4CcFE2A92338f66);
 
     function run() public {
         assertEq(WETH.symbol(), "WETH");
 
+        wfCashERC4626 impl = wfCashERC4626(0x44919c298CC2dd295FD2b2dE10E944491cDB8c48);
+        WrappedfCashFactory factory = WrappedfCashFactory(0x56408a51b96609c10B005a2fc599ee36b534d01b);
+        beacon.upgradeTo(address(impl));
+
         vm.startBroadcast();
-        wfCashERC4626 impl = new wfCashERC4626(NOTIONAL, WETH);
+        beacon.transferOwnership(NOTIONAL.owner());
         vm.stopBroadcast();
 
-        vm.prank(NOTIONAL.owner());
-        beacon.upgradeTo(address(impl));
-        console.log("Upgrade CallData: ");
-        console.log("Target: %s", address(beacon));
-        console.log("From: %s", NOTIONAL.owner());
-        console.log("CallData:");
-        console.logBytes(abi.encodeWithSignature("upgradeTo(address)", address(impl)));
+        console.log("FACTORY ADDRESS", address(factory));
+        assertEq(NOTIONAL.owner(), beacon.owner());
+        console.log("Beacon Owner", beacon.owner());
+
+        address wrapper1 = factory.deployWrapper(1, 1734048000);
+        console.log("WRAPPER", wrapper1);
+
+        vm.expectRevert();
+        factory.deployWrapper(4, 1734048000);
     }
 }
